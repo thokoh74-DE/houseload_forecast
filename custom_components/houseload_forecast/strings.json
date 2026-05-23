@@ -1,0 +1,334 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Hauslast Prognose – Sensoren auswählen",
+                "description": "Wähle die Sensoren für Batterie, PV-Prognose und Hauslast aus.",
+                "data": {
+                    "bat_capacity_sensor": "Effektive Akkukapazität (Sensor in kWh)",
+                    "bat_soc_sensor": "Akku-Ladestand (Sensor in %)",
+                    "bat_cutoff_sensor": "Entladeschluss / Reserve (Sensor in %)",
+                    "pv_forecast_today_sensor": "PV-Prognose Heute (Solcast, Attribut detailedHourly)",
+                    "pv_forecast_tomorrow_sensor": "PV-Prognose Morgen (Solcast, Attribut detailedHourly)",
+                    "force_export_boolean": "Force-Export aktiv (input_boolean)",
+                    "force_export_power": "Force-Export Leistung (number, in kWh)",
+                    "hauslast_stundlich_sensor": "Hauslast stündlich (Recorder-Sensor für Historiendaten)",
+                    "history_weeks": "Datenzeitraum (0 = unbegrenzt)"
+                },
+                "data_description": {
+                    "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh, z. B. sensor.alb002022083046_current_capacity",
+                    "bat_soc_sensor": "Aktueller Ladestand in Prozent, z. B. sensor.alphaess_soc_battery",
+                    "bat_cutoff_sensor": "Mindest-Ladestand in Prozent (Reserve), z. B. sensor.alphaess_discharging_cutoff_soc",
+                    "pv_forecast_today_sensor": "Solcast-Sensor für heute, muss das Attribut detailedHourly mit pv_estimate je Stunde enthalten",
+                    "pv_forecast_tomorrow_sensor": "Solcast-Sensor für morgen, muss das Attribut detailedHourly mit pv_estimate je Stunde enthalten",
+                    "force_export_boolean": "Optional – leer lassen wenn nicht vorhanden",
+                    "force_export_power": "Optional – leer lassen wenn nicht vorhanden",
+                    "hauslast_stundlich_sensor": "Sensor, dessen stündliche Statistiken für die Profilberechnung verwendet werden",
+                    "history_weeks": "Anzahl Wochen für die historische Profilberechnung. 0 = gesamte Datenbasis verwenden. Voreinstellung: 8"
+                }
+            },
+            "fallback_wt": {
+                "title": "Wochentag – Fallback-Profil",
+                "description": "Manuelle Stundenprofile in Watt für Werktage (Montag bis Freitag). Diese Werte werden verwendet, solange noch keine ausreichende Datenbasis vorhanden ist.",
+                "data": {
+                    "fallback_wt_00": "Wochentag 00:00 Uhr",
+                    "fallback_wt_01": "Wochentag 01:00 Uhr",
+                    "fallback_wt_02": "Wochentag 02:00 Uhr",
+                    "fallback_wt_03": "Wochentag 03:00 Uhr",
+                    "fallback_wt_04": "Wochentag 04:00 Uhr",
+                    "fallback_wt_05": "Wochentag 05:00 Uhr",
+                    "fallback_wt_06": "Wochentag 06:00 Uhr",
+                    "fallback_wt_07": "Wochentag 07:00 Uhr",
+                    "fallback_wt_08": "Wochentag 08:00 Uhr",
+                    "fallback_wt_09": "Wochentag 09:00 Uhr",
+                    "fallback_wt_10": "Wochentag 10:00 Uhr",
+                    "fallback_wt_11": "Wochentag 11:00 Uhr",
+                    "fallback_wt_12": "Wochentag 12:00 Uhr",
+                    "fallback_wt_13": "Wochentag 13:00 Uhr",
+                    "fallback_wt_14": "Wochentag 14:00 Uhr",
+                    "fallback_wt_15": "Wochentag 15:00 Uhr",
+                    "fallback_wt_16": "Wochentag 16:00 Uhr",
+                    "fallback_wt_17": "Wochentag 17:00 Uhr",
+                    "fallback_wt_18": "Wochentag 18:00 Uhr",
+                    "fallback_wt_19": "Wochentag 19:00 Uhr",
+                    "fallback_wt_20": "Wochentag 20:00 Uhr",
+                    "fallback_wt_21": "Wochentag 21:00 Uhr",
+                    "fallback_wt_22": "Wochentag 22:00 Uhr",
+                    "fallback_wt_23": "Wochentag 23:00 Uhr"
+                },
+                "data_description": {}
+            },
+            "fallback_we": {
+                "title": "Wochenende – Fallback-Profil",
+                "description": "Manuelle Stundenprofile in Watt für Wochenenden (Samstag und Sonntag). Diese Werte werden verwendet, solange noch keine ausreichende Datenbasis vorhanden ist.",
+                "data": {
+                    "fallback_we_00": "Wochenende 00:00 Uhr",
+                    "fallback_we_01": "Wochenende 01:00 Uhr",
+                    "fallback_we_02": "Wochenende 02:00 Uhr",
+                    "fallback_we_03": "Wochenende 03:00 Uhr",
+                    "fallback_we_04": "Wochenende 04:00 Uhr",
+                    "fallback_we_05": "Wochenende 05:00 Uhr",
+                    "fallback_we_06": "Wochenende 06:00 Uhr",
+                    "fallback_we_07": "Wochenende 07:00 Uhr",
+                    "fallback_we_08": "Wochenende 08:00 Uhr",
+                    "fallback_we_09": "Wochenende 09:00 Uhr",
+                    "fallback_we_10": "Wochenende 10:00 Uhr",
+                    "fallback_we_11": "Wochenende 11:00 Uhr",
+                    "fallback_we_12": "Wochenende 12:00 Uhr",
+                    "fallback_we_13": "Wochenende 13:00 Uhr",
+                    "fallback_we_14": "Wochenende 14:00 Uhr",
+                    "fallback_we_15": "Wochenende 15:00 Uhr",
+                    "fallback_we_16": "Wochenende 16:00 Uhr",
+                    "fallback_we_17": "Wochenende 17:00 Uhr",
+                    "fallback_we_18": "Wochenende 18:00 Uhr",
+                    "fallback_we_19": "Wochenende 19:00 Uhr",
+                    "fallback_we_20": "Wochenende 20:00 Uhr",
+                    "fallback_we_21": "Wochenende 21:00 Uhr",
+                    "fallback_we_22": "Wochenende 22:00 Uhr",
+                    "fallback_we_23": "Wochenende 23:00 Uhr"
+                },
+                "data_description": {}
+            }
+        },
+        "error": {
+            "cannot_connect": "Verbindung fehlgeschlagen",
+            "invalid_sensor": "Sensor nicht gefunden oder nicht verfügbar"
+        },
+        "abort": {
+            "already_configured": "Hauslast Prognose ist bereits eingerichtet"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Einstellungen",
+                "description": "Was möchtest du bearbeiten?",
+                "menu_options": {
+                    "sensors": "Sensoren anpassen",
+                    "fallback_wt": "Fallback-Profile bearbeiten"
+                }
+            },
+            "sensors": {
+                "title": "Sensoren anpassen",
+                "description": "Ändere die verwendeten Sensoren für Batterie, PV-Prognose und Hauslast.",
+                "data": {
+                    "bat_capacity_sensor": "Effektive Akkukapazität (Sensor in kWh)",
+                    "bat_soc_sensor": "Akku-Ladestand (Sensor in %)",
+                    "bat_cutoff_sensor": "Entladeschluss / Reserve (Sensor in %)",
+                    "pv_forecast_today_sensor": "PV-Prognose Heute (Solcast)",
+                    "pv_forecast_tomorrow_sensor": "PV-Prognose Morgen (Solcast)",
+                    "force_export_boolean": "Force-Export aktiv (input_boolean)",
+                    "force_export_power": "Force-Export Leistung (number)",
+                    "hauslast_stundlich_sensor": "Hauslast stündlich (Recorder-Sensor)",
+                    "history_weeks": "Datenzeitraum (0 = unbegrenzt)"
+                },
+                "data_description": {
+                    "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh",
+                    "bat_soc_sensor": "Aktueller Ladestand in Prozent",
+                    "bat_cutoff_sensor": "Mindest-Ladestand in Prozent (Reserve)",
+                    "pv_forecast_today_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten",
+                    "pv_forecast_tomorrow_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten",
+                    "force_export_boolean": "Optional – leer lassen wenn nicht vorhanden",
+                    "force_export_power": "Optional – leer lassen wenn nicht vorhanden",
+                    "hauslast_stundlich_sensor": "Für die historische Profilberechnung via SQLite",
+                    "history_weeks": "Anzahl Wochen für die historische Profilberechnung. 0 = gesamte Datenbasis verwenden."
+                }
+            },
+            "fallback_wt": {
+                "title": "Wochentag – Fallback-Profil",
+                "description": "Stundenprofile in Watt für Werktage (Montag bis Freitag).",
+                "data": {
+                    "fallback_wt_00": "Wochentag 00:00 Uhr",
+                    "fallback_wt_01": "Wochentag 01:00 Uhr",
+                    "fallback_wt_02": "Wochentag 02:00 Uhr",
+                    "fallback_wt_03": "Wochentag 03:00 Uhr",
+                    "fallback_wt_04": "Wochentag 04:00 Uhr",
+                    "fallback_wt_05": "Wochentag 05:00 Uhr",
+                    "fallback_wt_06": "Wochentag 06:00 Uhr",
+                    "fallback_wt_07": "Wochentag 07:00 Uhr",
+                    "fallback_wt_08": "Wochentag 08:00 Uhr",
+                    "fallback_wt_09": "Wochentag 09:00 Uhr",
+                    "fallback_wt_10": "Wochentag 10:00 Uhr",
+                    "fallback_wt_11": "Wochentag 11:00 Uhr",
+                    "fallback_wt_12": "Wochentag 12:00 Uhr",
+                    "fallback_wt_13": "Wochentag 13:00 Uhr",
+                    "fallback_wt_14": "Wochentag 14:00 Uhr",
+                    "fallback_wt_15": "Wochentag 15:00 Uhr",
+                    "fallback_wt_16": "Wochentag 16:00 Uhr",
+                    "fallback_wt_17": "Wochentag 17:00 Uhr",
+                    "fallback_wt_18": "Wochentag 18:00 Uhr",
+                    "fallback_wt_19": "Wochentag 19:00 Uhr",
+                    "fallback_wt_20": "Wochentag 20:00 Uhr",
+                    "fallback_wt_21": "Wochentag 21:00 Uhr",
+                    "fallback_wt_22": "Wochentag 22:00 Uhr",
+                    "fallback_wt_23": "Wochentag 23:00 Uhr"
+                },
+                "data_description": {}
+            },
+            "fallback_we": {
+                "title": "Wochenende – Fallback-Profil",
+                "description": "Stundenprofile in Watt für Wochenenden (Samstag und Sonntag).",
+                "data": {
+                    "fallback_we_00": "Wochenende 00:00 Uhr",
+                    "fallback_we_01": "Wochenende 01:00 Uhr",
+                    "fallback_we_02": "Wochenende 02:00 Uhr",
+                    "fallback_we_03": "Wochenende 03:00 Uhr",
+                    "fallback_we_04": "Wochenende 04:00 Uhr",
+                    "fallback_we_05": "Wochenende 05:00 Uhr",
+                    "fallback_we_06": "Wochenende 06:00 Uhr",
+                    "fallback_we_07": "Wochenende 07:00 Uhr",
+                    "fallback_we_08": "Wochenende 08:00 Uhr",
+                    "fallback_we_09": "Wochenende 09:00 Uhr",
+                    "fallback_we_10": "Wochenende 10:00 Uhr",
+                    "fallback_we_11": "Wochenende 11:00 Uhr",
+                    "fallback_we_12": "Wochenende 12:00 Uhr",
+                    "fallback_we_13": "Wochenende 13:00 Uhr",
+                    "fallback_we_14": "Wochenende 14:00 Uhr",
+                    "fallback_we_15": "Wochenende 15:00 Uhr",
+                    "fallback_we_16": "Wochenende 16:00 Uhr",
+                    "fallback_we_17": "Wochenende 17:00 Uhr",
+                    "fallback_we_18": "Wochenende 18:00 Uhr",
+                    "fallback_we_19": "Wochenende 19:00 Uhr",
+                    "fallback_we_20": "Wochenende 20:00 Uhr",
+                    "fallback_we_21": "Wochenende 21:00 Uhr",
+                    "fallback_we_22": "Wochenende 22:00 Uhr",
+                    "fallback_we_23": "Wochenende 23:00 Uhr"
+                },
+                "data_description": {}
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "hauslast_fallback_wochentag": {
+                "name": "Hauslast Fallback Wochentag"
+            },
+            "hauslast_fallback_wochenende": {
+                "name": "Hauslast Fallback Wochenende"
+            },
+            "hauslast_prognose_heute": {
+                "name": "Hauslast Prognose Heute",
+                "state_attributes": {
+                    "data_days": {
+                        "name": "Anzahl Tage Datenbasis"
+                    },
+                    "bat_kwh": {
+                        "name": "Batterieladezustand in kWh"
+                    },
+                    "bat_max_kwh": {
+                        "name": "Maximale Batterieladekapazität in kWh"
+                    },
+                    "profil_quelle_wochentag": {
+                        "name": "Profilquelle Wochentag"
+                    },
+                    "profil_quelle_wochenende": {
+                        "name": "Profilquelle Wochenende"
+                    }
+                }
+            },
+            "hauslast_prognose_morgen": {
+                "name": "Hauslast Prognose Morgen",
+                "state_attributes": {
+                    "data_days": {
+                        "name": "Anzahl Tage Datenbasis"
+                    },
+                    "bat_kwh": {
+                        "name": "Batterieladezustand in kWh"
+                    },
+                    "bat_max_kwh": {
+                        "name": "Maximale Batterieladekapazität in kWh"
+                    },
+                    "profil_quelle_wochentag": {
+                        "name": "Profilquelle Wochentag"
+                    },
+                    "profil_quelle_wochenende": {
+                        "name": "Profilquelle Wochenende"
+                    }
+                }
+            },
+            "pv_akku_restlaufzeit_prognose": {
+                "name": "PV Akku Restlaufzeit Prognose",
+                "state_attributes": {
+                    "calculation_timestamp": {
+                        "name": "Letzte Aktualisierung Prognose"
+                    },
+                    "data_days": {
+                        "name": "Anzahl Tage Datenbasis"
+                    },
+                    "bat_kwh": {
+                        "name": "Batterieladezustand in kWh"
+                    },
+                    "bat_max_kwh": {
+                        "name": "Maximale Batterieladekapazität in kWh"
+                    },
+                    "diag_bat_kapazitaet_kwh": {
+                        "name": "Akkukapazität gesamt (kWh)"
+                    },
+                    "diag_soc_pct": {
+                        "name": "Ladestand (%)"
+                    },
+                    "diag_cutoff_pct": {
+                        "name": "Entladeschluss (%)"
+                    },
+                    "diag_nutzbar_pct": {
+                        "name": "Nutzbare Kapazität (%)"
+                    },
+                    "diag_force_export_aktiv": {
+                        "name": "Force-Export aktiv"
+                    },
+                    "diag_force_export_kwh": {
+                        "name": "Force-Export Leistung (kWh)"
+                    },
+                    "diag_profil_quelle_wochentag": {
+                        "name": "Profilquelle Wochentag"
+                    },
+                    "diag_profil_quelle_wochenende": {
+                        "name": "Profilquelle Wochenende"
+                    },
+                    "diag_pv_stunden_heute": {
+                        "name": "PV-Stunden heute (Solcast)"
+                    },
+                    "diag_pv_stunden_morgen": {
+                        "name": "PV-Stunden morgen (Solcast)"
+                    },
+                    "diag_hauslast_slots_heute": {
+                        "name": "Hauslast-Slots heute"
+                    },
+                    "diag_hauslast_slots_morgen": {
+                        "name": "Hauslast-Slots morgen"
+                    },
+                    "diag_soc_slots_verarbeitet": {
+                        "name": "Verarbeitete SOC-Slots"
+                    }
+                }
+            },
+            "diag_calculation_timestamp": {
+                "name": "Letzte Aktualisierung Prognose"
+            },
+            "diag_data_days": {
+                "name": "Anzahl Tage Datenbasis"
+            },
+            "diag_bat_kwh": {
+                "name": "Nutzbare Kapazität in kWh"
+            },
+            "diag_bat_max_kwh": {
+                "name": "Effektive Batteriekapazität in kWh"
+            },
+            "diag_usable_pct": {
+                "name": "Nutzbare Kapazität (%)"
+            },
+            "diag_force_on": {
+                "name": "Force-Export aktiv"
+            },
+            "diag_soc_pct_raw": {
+                "name": "Batterieladezustand (%)"
+            },
+            "diag_bat_rest_kwh": {
+                "name": "Restkapazität bis CutOff in kWh"
+            },
+            "diag_cutoff_kwh": {
+                "name": "Entladeschluss in kWh"
+            }
+        }
+    }
+}

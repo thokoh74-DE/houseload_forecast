@@ -1,0 +1,15 @@
+{
+  "domain": "houseload_forecast",
+  "name": "Hauslast Prognose & Akku Restlaufzeit (BETA)",
+  "version": "1.0.0b1",
+  "documentation": "https://github.com/thokoh74-DE/houseload_forecast",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [
+    "@thokoh74-DE"
+  ],
+  "iot_class": "local_polling",
+  "config_flow": true,
+  "integration_type": "hub",
+  "issue_tracker": "https://github.com/thokoh74-DE/houseload_forecast/issues"
+}

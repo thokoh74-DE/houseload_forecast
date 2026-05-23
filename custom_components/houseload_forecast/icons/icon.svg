@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="128" fill="#1a237e"/>
+
+  <!-- House shape -->
+  <polygon points="128,40 36,120 56,120 56,210 200,210 200,120 220,120" fill="#3949ab" stroke="#5c6bc0" stroke-width="3"/>
+
+  <!-- Roof highlight -->
+  <polygon points="128,40 36,120 56,120 56,130 128,55 200,130 200,120 220,120" fill="#5c6bc0"/>
+
+  <!-- Door -->
+  <rect x="106" y="155" width="44" height="55" rx="4" fill="#1a237e"/>
+
+  <!-- Window left -->
+  <rect x="68" y="140" width="30" height="28" rx="3" fill="#90caf9" opacity="0.9"/>
+  <line x1="83" y1="140" x2="83" y2="168" stroke="#1a237e" stroke-width="2"/>
+  <line x1="68" y1="154" x2="98" y2="154" stroke="#1a237e" stroke-width="2"/>
+
+  <!-- Window right -->
+  <rect x="158" y="140" width="30" height="28" rx="3" fill="#90caf9" opacity="0.9"/>
+  <line x1="173" y1="140" x2="173" y2="168" stroke="#1a237e" stroke-width="2"/>
+  <line x1="158" y1="154" x2="188" y2="154" stroke="#1a237e" stroke-width="2"/>
+
+  <!-- Solar panel on roof -->
+  <rect x="90" y="75" width="76" height="34" rx="4" fill="#1565c0" stroke="#42a5f5" stroke-width="1.5"/>
+  <line x1="115" y1="75" x2="115" y2="109" stroke="#42a5f5" stroke-width="1.5" opacity="0.7"/>
+  <line x1="141" y1="75" x2="141" y2="109" stroke="#42a5f5" stroke-width="1.5" opacity="0.7"/>
+  <line x1="90" y1="92" x2="166" y2="92" stroke="#42a5f5" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- Lightning bolt / energy symbol -->
+  <path d="M136,78 L126,93 L133,93 L122,108 L135,93 L128,93 Z" fill="#ffd54f" opacity="0.9"/>
+
+  <!-- Chart / forecast bars at bottom -->
+  <rect x="42" y="222" width="12" height="18" rx="2" fill="#42a5f5" opacity="0.85"/>
+  <rect x="58" y="216" width="12" height="24" rx="2" fill="#42a5f5" opacity="0.85"/>
+  <rect x="74" y="219" width="12" height="21" rx="2" fill="#42a5f5" opacity="0.85"/>
+  <rect x="90" y="213" width="12" height="27" rx="2" fill="#66bb6a" opacity="0.85"/>
+  <rect x="106" y="208" width="12" height="32" rx="2" fill="#66bb6a" opacity="0.85"/>
+  <rect x="122" y="211" width="12" height="29" rx="2" fill="#66bb6a" opacity="0.85"/>
+  <rect x="138" y="217" width="12" height="23" rx="2" fill="#ffa726" opacity="0.85"/>
+  <rect x="154" y="220" width="12" height="20" rx="2" fill="#ffa726" opacity="0.85"/>
+  <rect x="170" y="215" width="12" height="25" rx="2" fill="#ffa726" opacity="0.85"/>
+  <rect x="186" y="222" width="12" height="18" rx="2" fill="#ef5350" opacity="0.85"/>
+  <rect x="202" y="218" width="12" height="22" rx="2" fill="#ef5350" opacity="0.85"/>
+
+  <!-- Trend line over bars -->
+  <polyline points="48,221 64,215 80,218 96,212 112,207 128,210 144,216 160,219 176,214 192,221 208,217"
+    fill="none" stroke="#ffd54f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
