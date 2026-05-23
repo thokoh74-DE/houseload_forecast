@@ -2,4 +2,5 @@
   "name": "Hauslast Prognose & Akku Restlaufzeit",
   "render_readme": true,
   "content_in_root": false
+  "icon": "https://raw.githubusercontent.com/thokoh74-DE/houseload_forecast/main/custom_components/houseload_forecast/brand/icon.png"
 }
