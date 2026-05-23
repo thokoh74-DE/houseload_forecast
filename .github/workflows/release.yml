@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Create Release ZIP
@@ -22,5 +25,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: houseload_forecast.zip
+          fail_on_unmatched_files: true
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
