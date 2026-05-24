@@ -1,6 +1,6 @@
 {
   "domain": "houseload_forecast",
-  "name": "Hauslast Prognose & Akku Restlaufzeit (BETA)",
+  "name": "House Load Forecast & PV Battery Runtime",
   "version": "1.1.0",
   "documentation": "https://github.com/thokoh74-DE/houseload_forecast",
   "requirements": [],

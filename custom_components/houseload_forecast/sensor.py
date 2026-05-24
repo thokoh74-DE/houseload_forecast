@@ -524,6 +524,8 @@ class HauslastCoordinator:
 # ── Sensor-Klassen ─────────────────────────────────────────────────────────────
 
 class _HauslastBaseSensor(SensorEntity):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: HauslastCoordinator, entry: ConfigEntry):
         self._coordinator = coordinator
         self._entry = entry
@@ -532,9 +534,9 @@ class _HauslastBaseSensor(SensorEntity):
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self._entry.entry_id)},
-            "name": "Hauslast Prognose",
+            "name": "House Load Forecast",
             "manufacturer": "Custom",
-            "model": "Hauslast Prognose & Akku Restlaufzeit",
+            "model": "House Load Forecast & PV Battery Runtime",
         }
 
     async def async_added_to_hass(self):

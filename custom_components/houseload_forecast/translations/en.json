@@ -200,135 +200,6 @@
     },
     "entity": {
         "sensor": {
-            "hauslast_fallback_wochentag": {
-                "name": "Household Load Fallback Weekday"
-            },
-            "hauslast_fallback_wochenende": {
-                "name": "Household Load Fallback Weekend"
-            },
-            "hauslast_prognose_heute": {
-                "name": "Household Load Forecast Today",
-                "state_attributes": {
-                    "data_days": {
-                        "name": "Number of days in dataset"
-                    },
-                    "bat_kwh": {
-                        "name": "Battery charge (kWh)"
-                    },
-                    "bat_max_kwh": {
-                        "name": "Maximum battery capacity (kWh)"
-                    },
-                    "profil_quelle_wochentag": {
-                        "name": "Profile source weekday"
-                    },
-                    "profil_quelle_wochenende": {
-                        "name": "Profile source weekend"
-                    }
-                }
-            },
-            "hauslast_prognose_morgen": {
-                "name": "Household Load Forecast Tomorrow",
-                "state_attributes": {
-                    "data_days": {
-                        "name": "Number of days in dataset"
-                    },
-                    "bat_kwh": {
-                        "name": "Battery charge (kWh)"
-                    },
-                    "bat_max_kwh": {
-                        "name": "Maximum battery capacity (kWh)"
-                    },
-                    "profil_quelle_wochentag": {
-                        "name": "Profile source weekday"
-                    },
-                    "profil_quelle_wochenende": {
-                        "name": "Profile source weekend"
-                    }
-                }
-            },
-            "pv_akku_restlaufzeit_prognose": {
-                "name": "PV Battery Runtime Forecast",
-                "state_attributes": {
-                    "calculation_timestamp": {
-                        "name": "Last forecast update"
-                    },
-                    "data_days": {
-                        "name": "Number of days in dataset"
-                    },
-                    "bat_kwh": {
-                        "name": "Battery charge (kWh)"
-                    },
-                    "bat_max_kwh": {
-                        "name": "Maximum battery capacity (kWh)"
-                    },
-                    "diag_bat_kapazitaet_kwh": {
-                        "name": "Total battery capacity (kWh)"
-                    },
-                    "diag_soc_pct": {
-                        "name": "State of charge (%)"
-                    },
-                    "diag_cutoff_pct": {
-                        "name": "Discharge cutoff (%)"
-                    },
-                    "diag_nutzbar_pct": {
-                        "name": "Usable capacity (%)"
-                    },
-                    "diag_force_export_aktiv": {
-                        "name": "Force export active"
-                    },
-                    "diag_force_export_kwh": {
-                        "name": "Force export power (kWh)"
-                    },
-                    "diag_profil_quelle_wochentag": {
-                        "name": "Profile source weekday"
-                    },
-                    "diag_profil_quelle_wochenende": {
-                        "name": "Profile source weekend"
-                    },
-                    "diag_pv_stunden_heute": {
-                        "name": "PV hours today (Solcast)"
-                    },
-                    "diag_pv_stunden_morgen": {
-                        "name": "PV hours tomorrow (Solcast)"
-                    },
-                    "diag_hauslast_slots_heute": {
-                        "name": "Load slots today"
-                    },
-                    "diag_hauslast_slots_morgen": {
-                        "name": "Load slots tomorrow"
-                    },
-                    "diag_soc_slots_verarbeitet": {
-                        "name": "SOC slots processed"
-                    }
-                }
-            },
-            "diag_calculation_timestamp": {
-                "name": "Last Forecast Update"
-            },
-            "diag_data_days": {
-                "name": "Data History Days"
-            },
-            "diag_bat_kwh": {
-                "name": "Usable Capacity"
-            },
-            "diag_bat_max_kwh": {
-                "name": "Effective Battery Capacity"
-            },
-            "diag_usable_pct": {
-                "name": "Usable capacity (%)"
-            },
-            "diag_force_on": {
-                "name": "Force Export Active"
-            },
-            "diag_soc_pct_raw": {
-                "name": "Battery State of Charge"
-            },
-            "diag_bat_rest_kwh": {
-                "name": "Remaining Capacity to Cutoff"
-            },
-            "diag_cutoff_kwh": {
-                "name": "Discharge cutoff (kWh)"
-            },
             "forecast_today": {
                 "name": "House Load Forecast Today"
             },
@@ -336,13 +207,34 @@
                 "name": "House Load Forecast Tomorrow"
             },
             "battery_runtime": {
-                "name": "PV Battery Runtime Forecast"
+                "name": "PV Battery Runtime"
             },
             "fallback_weekday": {
                 "name": "House Load Fallback Weekday"
             },
             "fallback_weekend": {
                 "name": "House Load Fallback Weekend"
+            },
+            "diag_calculation_timestamp": {
+                "name": "Last Forecast Update"
+            },
+            "diag_data_days": {
+                "name": "Data History Days"
+            },
+            "diag_soc_pct_raw": {
+                "name": "Battery State of Charge"
+            },
+            "diag_bat_max_kwh": {
+                "name": "Effective Battery Capacity"
+            },
+            "diag_bat_kwh": {
+                "name": "Usable Capacity"
+            },
+            "diag_bat_rest_kwh": {
+                "name": "Remaining Capacity to Cutoff"
+            },
+            "diag_force_on": {
+                "name": "Force Export Active"
             }
         }
     }

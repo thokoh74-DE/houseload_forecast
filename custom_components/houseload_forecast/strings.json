@@ -200,135 +200,6 @@
     },
     "entity": {
         "sensor": {
-            "hauslast_fallback_wochentag": {
-                "name": "Hauslast Fallback Wochentag"
-            },
-            "hauslast_fallback_wochenende": {
-                "name": "Hauslast Fallback Wochenende"
-            },
-            "hauslast_prognose_heute": {
-                "name": "Hauslast Prognose Heute",
-                "state_attributes": {
-                    "data_days": {
-                        "name": "Anzahl Tage Datenbasis"
-                    },
-                    "bat_kwh": {
-                        "name": "Batterieladezustand in kWh"
-                    },
-                    "bat_max_kwh": {
-                        "name": "Maximale Batterieladekapazität in kWh"
-                    },
-                    "profil_quelle_wochentag": {
-                        "name": "Profilquelle Wochentag"
-                    },
-                    "profil_quelle_wochenende": {
-                        "name": "Profilquelle Wochenende"
-                    }
-                }
-            },
-            "hauslast_prognose_morgen": {
-                "name": "Hauslast Prognose Morgen",
-                "state_attributes": {
-                    "data_days": {
-                        "name": "Anzahl Tage Datenbasis"
-                    },
-                    "bat_kwh": {
-                        "name": "Batterieladezustand in kWh"
-                    },
-                    "bat_max_kwh": {
-                        "name": "Maximale Batterieladekapazität in kWh"
-                    },
-                    "profil_quelle_wochentag": {
-                        "name": "Profilquelle Wochentag"
-                    },
-                    "profil_quelle_wochenende": {
-                        "name": "Profilquelle Wochenende"
-                    }
-                }
-            },
-            "pv_akku_restlaufzeit_prognose": {
-                "name": "PV Akku Restlaufzeit Prognose",
-                "state_attributes": {
-                    "calculation_timestamp": {
-                        "name": "Letzte Aktualisierung Prognose"
-                    },
-                    "data_days": {
-                        "name": "Anzahl Tage Datenbasis"
-                    },
-                    "bat_kwh": {
-                        "name": "Batterieladezustand in kWh"
-                    },
-                    "bat_max_kwh": {
-                        "name": "Maximale Batterieladekapazität in kWh"
-                    },
-                    "diag_bat_kapazitaet_kwh": {
-                        "name": "Akkukapazität gesamt (kWh)"
-                    },
-                    "diag_soc_pct": {
-                        "name": "Ladestand (%)"
-                    },
-                    "diag_cutoff_pct": {
-                        "name": "Entladeschluss (%)"
-                    },
-                    "diag_nutzbar_pct": {
-                        "name": "Nutzbare Kapazität (%)"
-                    },
-                    "diag_force_export_aktiv": {
-                        "name": "Force-Export aktiv"
-                    },
-                    "diag_force_export_kwh": {
-                        "name": "Force-Export Leistung (kWh)"
-                    },
-                    "diag_profil_quelle_wochentag": {
-                        "name": "Profilquelle Wochentag"
-                    },
-                    "diag_profil_quelle_wochenende": {
-                        "name": "Profilquelle Wochenende"
-                    },
-                    "diag_pv_stunden_heute": {
-                        "name": "PV-Stunden heute (Solcast)"
-                    },
-                    "diag_pv_stunden_morgen": {
-                        "name": "PV-Stunden morgen (Solcast)"
-                    },
-                    "diag_hauslast_slots_heute": {
-                        "name": "Hauslast-Slots heute"
-                    },
-                    "diag_hauslast_slots_morgen": {
-                        "name": "Hauslast-Slots morgen"
-                    },
-                    "diag_soc_slots_verarbeitet": {
-                        "name": "Verarbeitete SOC-Slots"
-                    }
-                }
-            },
-            "diag_calculation_timestamp": {
-                "name": "Letzte Aktualisierung Prognose"
-            },
-            "diag_data_days": {
-                "name": "Anzahl Tage Datenbasis"
-            },
-            "diag_bat_kwh": {
-                "name": "Nutzbare Kapazität"
-            },
-            "diag_bat_max_kwh": {
-                "name": "Effektive Batteriekapazität"
-            },
-            "diag_usable_pct": {
-                "name": "Nutzbare Kapazität (%)"
-            },
-            "diag_force_on": {
-                "name": "Force-Export aktiv"
-            },
-            "diag_soc_pct_raw": {
-                "name": "Batterieladezustand"
-            },
-            "diag_bat_rest_kwh": {
-                "name": "Restkapazität bis CutOff"
-            },
-            "diag_cutoff_kwh": {
-                "name": "Entladeschluss in kWh"
-            },
             "forecast_today": {
                 "name": "Hauslast-Prognose Heute"
             },
@@ -343,6 +214,27 @@
             },
             "fallback_weekend": {
                 "name": "Hauslast Fallback Wochenende"
+            },
+            "diag_calculation_timestamp": {
+                "name": "Letzte Aktualisierung"
+            },
+            "diag_data_days": {
+                "name": "Anzahl Tage Datenbasis"
+            },
+            "diag_soc_pct_raw": {
+                "name": "Batterieladezustand"
+            },
+            "diag_bat_max_kwh": {
+                "name": "Effektive Batteriekapazität"
+            },
+            "diag_bat_kwh": {
+                "name": "Nutzbare Kapazität"
+            },
+            "diag_bat_rest_kwh": {
+                "name": "Restkapazität bis CutOff"
+            },
+            "diag_force_on": {
+                "name": "Force-Export aktiv"
             }
         }
     }
