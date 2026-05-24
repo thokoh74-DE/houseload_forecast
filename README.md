@@ -7,108 +7,108 @@
 
 🌍 **Deutsch** | [English](README.en.md)
 
-A Home Assistant custom integration for **hourly house load forecasting** and **battery runtime estimation** for PV systems with battery storage. The forecast is based on actual historical consumption data from the Home Assistant statistics database — differentiated by each individual day of the week.
+Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** und **Akku-Restlaufzeit-Berechnung** für PV-Anlagen mit Batteriespeicher. Die Prognose basiert auf den tatsächlichen historischen Verbrauchsdaten aus der Home Assistant Statistik-Datenbank – unterschieden nach jedem einzelnen Wochentag.
 
 ---
 
-## Feature Overview
+## Funktionsübersicht
 
-- **House Load Forecast (Today & Tomorrow):** Hourly forecast of household consumption in kWh, built from historical data of the last *n* weeks
-- **7 Individual Daily Profiles:** Each weekday (Monday to Sunday) gets its own 24-hour profile — no more generic weekday/weekend grouping
-- **IQR Outlier Filter:** Measurement artifacts and counter resets are automatically filtered out
-- **Configurable Time Range:** From 1 week to unlimited (0 = entire data history)
-- **Fallback Profiles:** Manual hourly profiles for weekdays and weekends, used when less than 10 days of data are available
-- **Battery Runtime:** Hourly SOC forecast combining PV forecast (Solcast), house load forecast and current battery charge
-- **Restore after Restart:** The last known runtime value is preserved after an HA restart until new valid sensor values are available
+- **Hauslast-Prognose (Heute & Morgen):** Stündliche Prognose des Haushaltsverbrauchs in kWh, aufgebaut aus den historischen Verbrauchsdaten der letzten *n* Wochen
+- **7 individuelle Tagesprofile:** Jeder Wochentag (Montag bis Sonntag) bekommt ein eigenes 24-Stunden-Profil – kein pauschales Wochentag/Wochenende mehr
+- **IQR-Ausreißerfilter:** Messartefakte und Zählerresets werden automatisch herausgefiltert
+- **Konfigurierbarer Datenzeitraum:** Von 1 Woche bis unbegrenzt (0 = gesamte Datenbasis)
+- **Fallback-Profile:** Manuelle Stundenprofile für Werktage und Wochenenden, solange noch nicht genug Datenpunkte vorhanden sind (< 10 Tage)
+- **Akku-Restlaufzeit:** Stundengenaue SOC-Prognose kombiniert PV-Vorhersage (Solcast), Hauslast-Prognose und aktuellen Akkustand
+- **Restore nach Neustart:** Der letzte bekannte Restlaufzeit-Wert bleibt nach einem HA-Neustart erhalten, bis neue valide Sensorwerte vorliegen
 
 ---
 
-## Requirements
+## Voraussetzungen
 
-| Requirement | Details |
+| Anforderung | Details |
 |---|---|
-| Home Assistant | ≥ 2024.1 (recommended: ≥ 2026.3 for icon support) |
-| Battery Integration | AlphaESS or similar — must provide capacity (kWh) and SoC (%) as sensors |
-| PV Forecast | [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) with `detailedHourly` attribute |
-| House Load Sensor | Sensor with `state_class: total_increasing` (kWh, hourly) or `measurement` (W) — must be recorded in HA statistics |
-| SQLite Database | Standard HA database at `/config/home-assistant_v2.db` |
+| Home Assistant | ≥ 2024.1 (empfohlen: ≥ 2026.3 für Icon-Unterstützung) |
+| Batteriespeicher-Integration | AlphaESS oder vergleichbar – muss Kapazität (kWh) und SoC (%) als Sensoren liefern |
+| PV-Prognose | [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) mit `detailedHourly`-Attribut |
+| Hauslast-Sensor | Sensor mit `state_class: total_increasing` (kWh, stündlich) oder `measurement` (W) – muss in der HA-Statistik erfasst sein |
+| SQLite-Datenbank | Standard-HA-Datenbank unter `/config/home-assistant_v2.db` |
 
 ---
 
 ## Installation
 
-### Via HACS (recommended)
+### Über HACS (empfohlen)
 
-1. Open HACS in Home Assistant
-2. **Integrations** → Three-dot menu top right → **Custom repositories**
-3. Enter URL: `https://github.com/thokoh74-DE/houseload_forecast`
-4. Category: **Integration** → **Add**
-5. The integration **"Hauslast Prognose & Akku Restlaufzeit"** now appears in the HACS list
-6. Click **Download** → Restart Home Assistant
+1. HACS in Home Assistant öffnen
+2. **Integrationen** → Drei-Punkte-Menü oben rechts → **Benutzerdefinierte Repositories**
+3. URL eingeben: `https://github.com/thokoh74-DE/houseload_forecast`
+4. Kategorie: **Integration** → **Hinzufügen**
+5. Die Integration **„Hauslast Prognose & Akku Restlaufzeit"** erscheint nun in der HACS-Liste
+6. **Herunterladen** klicken → Home Assistant neu starten
 
-### Manual
+### Manuell
 
-1. Download the `custom_components/houseload_forecast/` folder from the [latest release](https://github.com/thokoh74-DE/houseload_forecast/releases)
-2. Copy to `config/custom_components/houseload_forecast/`
-3. Restart Home Assistant
+1. Den Ordner `custom_components/houseload_forecast/` aus dem [neuesten Release](https://github.com/thokoh74-DE/houseload_forecast/releases) herunterladen
+2. In `config/custom_components/houseload_forecast/` kopieren
+3. Home Assistant neu starten
 
 ---
 
-## Setup
+## Einrichtung
 
-1. **Settings → Devices & Services → Add Integration**
-2. Search for **"Hauslast Prognose"**
-3. **Step 1 – Configure sensors:**
+1. **Einstellungen → Geräte & Dienste → Integration hinzufügen**
+2. Nach **„Hauslast Prognose"** suchen
+3. **Schritt 1 – Sensoren konfigurieren:**
 
-| Field | Description |
+| Feld | Beschreibung |
 |---|---|
-| Effective battery capacity | Sensor providing usable battery capacity in kWh |
-| Battery state of charge (SoC) | Sensor for current charge level in % |
-| Discharge cutoff / reserve | Sensor for minimum SoC in % (e.g. `10` for 10% reserve) |
-| PV forecast today | Solcast sensor with `detailedHourly` attribute for today |
-| PV forecast tomorrow | Solcast sensor with `detailedHourly` attribute for tomorrow |
-| Force export active | Optional: `input_boolean` for force export mode |
-| Force export power | Optional: `number` entity with export power in kW |
-| House load hourly | Hourly consumption sensor recorded in HA statistics |
-| History period | Number of weeks for historical calculation (0 = all data) |
+| Effektive Akkukapazität | Sensor, der die nutzbare Akkukapazität in kWh liefert |
+| Akku-Ladestand (SoC) | Sensor für den aktuellen Ladezustand in % |
+| Entladeschluss / Reserve | Sensor für den minimalen SoC in % (z.B. `10` für 10 % Reserve) |
+| PV-Prognose Heute | Solcast-Sensor mit `detailedHourly`-Attribut für heute |
+| PV-Prognose Morgen | Solcast-Sensor mit `detailedHourly`-Attribut für morgen |
+| Force-Export aktiv | Optional: `input_boolean` für Force-Export-Modus |
+| Force-Export Leistung | Optional: `number`-Entität mit der Export-Leistung in kW |
+| Hauslast stündlich | Stündlicher Verbrauchssensor, der in der HA-Statistik erfasst ist |
+| Datenzeitraum | Anzahl Wochen für die historische Berechnung (0 = alles) |
 
-4. **Step 2 – Fallback profiles:** Manual hourly profiles in watts for weekdays (Mon–Fri) and weekends (Sat+Sun) — automatically replaced by historical data once ≥ 10 days are available
-
----
-
-## Adjusting Settings
-
-Via **Settings → Devices & Services → Hauslast Prognose → Configure**:
-
-- **Edit sensors** – Change sensors and history period (without losing fallback profiles)
-- **Edit fallback profiles** – Adjust hourly values (without losing sensor configuration)
+4. **Schritt 2 – Fallback-Profile:** Manuelle Stundenprofile in Watt für Werktage (Mo–Fr) und Wochenende (Sa+So) – werden automatisch durch historische Daten ersetzt, sobald ≥ 10 Datentage vorhanden sind
 
 ---
 
-## Generated Sensors
+## Einstellungen anpassen
 
-### Main Sensors
+Über **Einstellungen → Geräte & Dienste → Hauslast Prognose → Konfigurieren** erscheint ein Menü:
 
-| Sensor | Unit | Description |
+- **Sensoren anpassen** – Sensoren und Datenzeitraum ändern (ohne die Fallback-Profile zu verlieren)
+- **Fallback-Profile bearbeiten** – Stundenwerte anpassen (ohne die Sensor-Konfiguration zu verlieren)
+
+---
+
+## Erzeugte Sensoren
+
+### Hauptsensoren
+
+| Sensor | Einheit | Beschreibung |
 |---|---|---|
-| `sensor.hauslast_prognose_heute` | kWh | Daily house load forecast for today |
-| `sensor.hauslast_prognose_morgen` | kWh | Daily house load forecast for tomorrow |
-| `sensor.pv_akku_restlaufzeit_prognose` | min | Remaining time until discharge cutoff is reached. A value of **2880 min means the battery will not run empty within the next 48 hours** based on the current forecast. |
+| `sensor.hauslast_prognose_heute` | kWh | Tagesprognose Hauslast für heute |
+| `sensor.hauslast_prognose_morgen` | kWh | Tagesprognose Hauslast für morgen |
+| `sensor.pv_akku_restlaufzeit_prognose` | min | Verbleibende Zeit bis zum Entladeschluss. Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
 
-### Key Attributes
+### Wichtige Attribute
 
 **`sensor.hauslast_prognose_heute` / `sensor.hauslast_prognose_morgen`:**
 
 ```yaml
 forecast:
   - period_start: "2026-05-24T00:00:00+02:00"
-    load_estimate: 0.43       # kWh for this hour
+    load_estimate: 0.43       # kWh für diese Stunde
   - period_start: "2026-05-24T01:00:00+02:00"
     load_estimate: 0.42
-  # ... 24 entries total
-profile_montag: [435, 420, ...]   # 24 watt values
+  # ... 24 Einträge gesamt
+profile_montag: [435, 420, ...]   # 24 Watt-Werte
 profile_dienstag: [...]
-# ... all 7 daily profiles
+# ... alle 7 Tagesprofile
 wochentag: "Samstag"
 profil_quelle_heute: "Historisch (letzte 8 Wochen, state (kWh→W), IQR-gefiltert)"
 daten_basis: "Historisch (letzte 8 Wochen)"
@@ -123,55 +123,55 @@ soc_hourly_forecast:
     soc_kwh: 7.8
   - period_start: "2026-05-24T17:00:00+02:00"
     soc_kwh: 7.2
-  # ... up to 48 entries
+  # ... bis zu 48 Einträge
 bat_kwh: 7.8
 bat_max_kwh: 7.78
 diag_soc_pct: 100.0
 diag_cutoff_pct: 10.0
 ```
 
-### Diagnostic Sensors
+### Diagnose-Sensoren
 
-All diagnostic sensors appear on the device page under **"Diagnostics"** and are hidden by default:
+Alle Diagnose-Sensoren erscheinen auf der Gerätseite unter **„Diagnose"** und sind standardmäßig ausgeblendet:
 
-| Sensor | Description |
+| Sensor | Beschreibung |
 |---|---|
-| Last forecast update | Timestamp of last calculation |
-| Number of data days | How many days of historical data are available |
-| Battery state of charge | Current SoC in % |
-| Effective battery capacity | Battery capacity in kWh |
-| Usable capacity | Currently usable energy in kWh |
-| Remaining capacity to cutoff | Remaining energy until discharge cutoff |
-| Force export active | Status of force export mode |
+| Letzte Aktualisierung Prognose | Zeitstempel der letzten Berechnung |
+| Anzahl Tage Datenbasis | Wie viele Tage historische Daten vorhanden sind |
+| Batterieladezustand | Aktueller SoC in % |
+| Effektive Batteriekapazität | Akkukapazität in kWh |
+| Nutzbare Kapazität | Aktuell nutzbare Energie in kWh |
+| Restkapazität bis CutOff | Verbleibende Energie bis Entladeschluss |
+| Force-Export aktiv | Status des Force-Export-Modus |
 
 ---
 
-## Profile Calculation in Detail
+## Profilberechnung im Detail
 
 ```
-Data situation                  Behaviour
+Datenlage                      Verhalten
 ─────────────────────────────────────────────────────────
-< 10 days data                 → Manual fallback profile
-≥ 10 days, MEASUREMENT sensor → AVG(mean) per hour & weekday
-≥ 10 days, TOTAL_INC sensor   → AVG(state × 1000) per hour & weekday
-Outliers                       → IQR filter (factor 3) before averaging
-Hour with too few data points  → Fallback value for that hour
+< 10 Tage Daten                → Manuelles Fallback-Profil
+≥ 10 Tage, MEASUREMENT-Sensor → AVG(mean) je Stunde & Wochentag
+≥ 10 Tage, TOTAL_INC-Sensor   → AVG(state × 1000) je Stunde & Wochentag
+Ausreißer                      → IQR-Filter (Faktor 3) vor Mittelwertbildung
+Stunde mit < Datenpunkten      → Fallback-Wert für diese Stunde
 ```
 
-The **IQR outlier filter** removes values outside `[Q1 − 3×IQR, Q3 + 3×IQR]` per hour and weekday before calculating the average. This prevents measurement artifacts from HA restarts or counter reset events from being included in the profile.
+Der **IQR-Ausreißerfilter** entfernt Werte außerhalb von `[Q1 − 3×IQR, Q3 + 3×IQR]` pro Stunde und Wochentag, bevor der Mittelwert berechnet wird. So werden Messartefakte durch HA-Neustarts oder Zählerreset-Ereignisse nicht in das Profil übernommen.
 
 ---
 
-## Dashboard Examples
+## Dashboard-Beispiele
 
-### Battery Forecast (ApexCharts)
+### Akku-Prognose (ApexCharts)
 
-Shows the current battery state of charge (blue) and the SOC forecast for the next 48 hours (dashed orange).
+Zeigt den aktuellen Batterieladezustand (blau) und die SOC-Prognose der nächsten 48 Stunden (orange gestrichelt).
 
-![Battery Forecast Dashboard](docs/images/screenshot_akku_prognose.png)
+![Akku-Prognose Dashboard](docs/images/screenshot_akku_prognose.png)
 
 <details>
-<summary>Show YAML</summary>
+<summary>YAML anzeigen</summary>
 
 ```yaml
 type: custom:apexcharts-card
@@ -331,20 +331,20 @@ card_mod:
     }
 ```
 
-> **Note:** `sensor.alphaess_soc_battery`, `sensor.hauslast_prognose_batterieladezustand` and `sensor.hauslast_prognose_nutzbare_kapazitat` may need to be adjusted to your own sensor names. Adjust the `max` value of the Y-axis (`7.78`) to match your battery capacity.
+> **Hinweis:** `sensor.alphaess_soc_battery`, `sensor.hauslast_prognose_batterieladezustand` und `sensor.hauslast_prognose_nutzbare_kapazitat` müssen ggf. an deine eigenen Sensor-Namen angepasst werden. Den `max`-Wert der Y-Achse (`7.78`) auf deine Akkukapazität anpassen.
 
 </details>
 
 ---
 
-### House Load Forecast (ApexCharts)
+### Hauslast-Prognose (ApexCharts)
 
-Shows the hourly forecast for today (blue) and tomorrow (orange) as a bar chart, together with the actual consumption (red).
+Zeigt die stündliche Prognose für heute (blau) und morgen (orange) als Balkendiagramm, zusammen mit dem tatsächlichen Ist-Verbrauch (rot).
 
-![House Load Forecast Dashboard](docs/images/screenshot_hauslast_prognose.png)
+![Hauslast-Prognose Dashboard](docs/images/screenshot_hauslast_prognose.png)
 
 <details>
-<summary>Show YAML</summary>
+<summary>YAML anzeigen</summary>
 
 ```yaml
 type: custom:apexcharts-card
@@ -376,7 +376,7 @@ apex_config:
       right: 0
   xaxis:
     title:
-      text: Time
+      text: Uhrzeit
     labels:
       show: true
       tickPlacement: between
@@ -391,10 +391,10 @@ span:
   start: day
 now:
   show: true
-  label: Now
+  label: Jetzt
 series:
   - entity: sensor.hauslast_prognose_heute
-    name: Today
+    name: Heute
     type: column
     color: "#4dabf7"
     unit: kWh
@@ -408,7 +408,7 @@ series:
         item.load_estimate
       ]);
   - entity: sensor.hauslast_prognose_heute
-    name: Forecast Today
+    name: Prognose Heute
     float_precision: 1
     color: "#4dabf7"
     unit: kWh
@@ -416,7 +416,7 @@ series:
       in_chart: false
       in_header: true
   - entity: sensor.hauslast_prognose_morgen
-    name: Tomorrow
+    name: Morgen
     type: column
     color: "#ffa94d"
     unit: kWh
@@ -430,7 +430,7 @@ series:
         item.load_estimate
       ]);
   - entity: sensor.hauslast_prognose_morgen
-    name: Forecast Tomorrow
+    name: Prognose Morgen
     color: "#ffa94d"
     unit: kWh
     float_precision: 1
@@ -438,7 +438,7 @@ series:
       in_chart: false
       in_header: true
   - entity: sensor.hauslast_taglich
-    name: Actual consumption
+    name: Ist-Verbrauch
     color: "#ff4444"
     unit: kWh
     float_precision: 1
@@ -446,7 +446,7 @@ series:
       in_chart: false
       in_header: true
   - entity: sensor.hauslast_stundlich
-    name: Actual consumption
+    name: Ist-Verbrauch
     type: column
     color: "#ff4444"
     opacity: 0.5
@@ -468,58 +468,58 @@ card_mod:
     }
 ```
 
-> **Note:** `sensor.hauslast_taglich` and `sensor.hauslast_stundlich` may need to be adjusted to your own sensor names. Adjust the `max` value of the Y-axis (`3`) to match your typical consumption.
+> **Hinweis:** `sensor.hauslast_taglich` und `sensor.hauslast_stundlich` müssen ggf. an deine eigenen Sensor-Namen angepasst werden. Den `max`-Wert der Y-Achse (`3`) ggf. an deinen typischen Verbrauch anpassen.
 
 </details>
 
 ---
 
-## Troubleshooting
+## Fehlerbehebung
 
-### Forecast values appear as 0 or fallback
+### Prognose-Werte erscheinen als 0 oder Fallback
 
-Check the debug log (Settings → System → Logs) for messages like `"Fallback (nur X Tage Daten)"`. The `data_days` attribute on the sensor shows how many days of data are available — at least 10 are required.
+Prüfe im Debug-Log (Einstellungen → System → Protokolle), ob Meldungen wie `"Fallback (nur X Tage Daten)"` erscheinen. Das Attribut `data_days` am Sensor zeigt, wie viele Tage Daten vorhanden sind – es werden mindestens 10 benötigt.
 
-### Outliers at certain hours
+### Ausreißer bei bestimmten Stunden
 
-The `debug_hauslast.py` script can be run directly on the HA host and shows raw values per hour from the statistics database:
+Das Skript `debug_hauslast.py` kann direkt auf dem HA-Host ausgeführt werden und zeigt die Rohwerte je Stunde aus der Statistik-Datenbank:
 
 ```bash
 python3 /config/debug_hauslast.py
 ```
 
-### Icon not displayed
+### Icon wird nicht angezeigt
 
-Requires Home Assistant ≥ 2026.3. On older versions the integration icon will be empty.
+Erfordert Home Assistant ≥ 2026.3. Bei älteren Versionen bleibt das Integrations-Icon leer.
 
-### Sensor briefly shows old value after restart
+### Sensor nach Neustart kurz auf altem Wert
 
-This is intentional — the last value is restored via `RestoreEntity` until the dependent sensors (battery, PV) become available again.
+Das ist beabsichtigt – der letzte Wert wird per `RestoreEntity` wiederhergestellt, bis die abhängigen Sensoren (Batterie, PV) wieder verfügbar sind.
 
 ---
 
 ## Changelog
 
 ### 1.0.0
-- Initial release on HACS
-- 7 individual daily profiles (Mon–Sun)
-- IQR outlier filter for historical data
-- Configurable history period (weeks)
-- Separate settings menus for sensors and fallback profiles
-- Restore function for battery runtime after restart
-- Brand icon via `brand/` folder (HA ≥ 2026.3)
+- Erstveröffentlichung auf HACS
+- 7 individuelle Tagesprofile (Mo–So)
+- IQR-Ausreißerfilter für historische Daten
+- Konfigurierbarer Datenzeitraum (Wochen)
+- Getrennte Einstellungsmenüs für Sensoren und Fallback-Profile
+- Restore-Funktion für Akku-Restlaufzeit nach Neustart
+- Brand-Icon über `brand/`-Ordner (HA ≥ 2026.3)
 
 ---
 
-## License
+## Lizenz
 
-MIT License – see [LICENSE](LICENSE)
+MIT License – siehe [LICENSE](LICENSE)
 
 ---
 
-## Acknowledgements
+## Danksagung
 
-- [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) for PV forecasting
-- [ApexCharts Card](https://github.com/RomRider/apexcharts-card) for dashboard visualisation
-- [homeassistant-alphaESS](https://github.com/CharlesGillanders/homeassistant-alphaESS) by CharlesGillanders for AlphaESS integration
-- [Integrating AlphaESS Inverter into Home Assistant via Modbus](https://projects.hillviewlodge.ie/alphaess/) by Projects@Hillview
+- [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) für die PV-Vorhersage
+- [ApexCharts Card](https://github.com/RomRider/apexcharts-card) für die Dashboard-Visualisierung
+- [homeassistant-alphaESS](https://github.com/CharlesGillanders/homeassistant-alphaESS) von CharlesGillanders für die AlphaESS-Integration
+- [Integrating AlphaESS Inverter into Home Assistant via Modbus](https://projects.hillviewlodge.ie/alphaess/) von Projects@Hillview
