@@ -91,13 +91,13 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 
 | Sensor | Einheit | Beschreibung |
 |---|---|---|
-| `sensor.house_load_forecast_today` | kWh | Tagesprognose Hauslast für heute (House Load Forecast Today) |
-| `sensor.house_load_forecast_tomorrow` | kWh | Tagesprognose Hauslast für morgen (House Load Forecast Tomorrow) |
-| `sensor.pv_battery_runtime_forecast` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
+| `sensor.hlf_forecast_today` | kWh | Tagesprognose Hauslast für heute (House Load Forecast Today) |
+| `sensor.hlf_forecast_tomorrow` | kWh | Tagesprognose Hauslast für morgen (House Load Forecast Tomorrow) |
+| `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
 
 ### Wichtige Attribute
 
-**`sensor.house_load_forecast_today` (House Load Forecast Today) / `sensor.house_load_forecast_tomorrow` (House Load Forecast Tomorrow):**
+**`sensor.hlf_forecast_today` (House Load Forecast Today) / `sensor.hlf_forecast_tomorrow` (House Load Forecast Tomorrow):**
 
 ```yaml
 forecast:
@@ -115,7 +115,7 @@ daten_basis: "Historisch (letzte 8 Wochen)"
 data_days: 56
 ```
 
-**`sensor.pv_battery_runtime_forecast` (PV Battery Runtime Forecast):**
+**`sensor.hlf_battery_runtime` (PV Battery Runtime Forecast):**
 
 ```yaml
 soc_hourly_forecast:
@@ -213,14 +213,14 @@ series:
     show:
       legend_value: false
       in_header: false
-  - entity: sensor.battery_state_of_charge
+  - entity: sensor.hlf_diag_soc_pct_raw
     show:
       in_header: true
       in_chart: false
     name: Batterie
     float_precision: 1
     color: "#4dabf7"
-  - entity: sensor.pv_battery_runtime_forecast
+  - entity: sensor.hlf_battery_runtime
     name: Prognose-SOC
     unit: kWh
     yaxis_id: power
@@ -245,7 +245,7 @@ series:
       in_header: false
       in_chart: true
     extend_to: false
-  - entity: sensor.usable_capacity
+  - entity: sensor.hlf_diag_bat_kwh
     name: Ist-SOC
     unit: kWh
     color: "#00e676"
@@ -253,7 +253,7 @@ series:
       in_header: true
       in_chart: false
     float_precision: 1
-  - entity: sensor.pv_battery_runtime_forecast
+  - entity: sensor.hlf_battery_runtime
     name: Restlaufzeit
     unit: min
     yaxis_id: power
@@ -331,7 +331,7 @@ card_mod:
     }
 ```
 
-> **Hinweis:** `sensor.alphaess_soc_battery`, `sensor.battery_state_of_charge` und `sensor.usable_capacity` müssen ggf. an deine eigenen Sensor-Namen angepasst werden. Den `max`-Wert der Y-Achse (`7.78`) auf deine Akkukapazität anpassen.
+> **Hinweis:** `sensor.alphaess_soc_battery`, `sensor.hlf_diag_soc_pct_raw` und `sensor.hlf_diag_bat_kwh` müssen ggf. an deine eigenen Sensor-Namen angepasst werden. Den `max`-Wert der Y-Achse (`7.78`) auf deine Akkukapazität anpassen.
 
 </details>
 
@@ -393,7 +393,7 @@ now:
   show: true
   label: Jetzt
 series:
-  - entity: sensor.house_load_forecast_today
+  - entity: sensor.hlf_forecast_today
     name: Heute
     type: column
     color: "#4dabf7"
@@ -407,7 +407,7 @@ series:
         new Date(item.period_start).getTime(),
         item.load_estimate
       ]);
-  - entity: sensor.house_load_forecast_today
+  - entity: sensor.hlf_forecast_today
     name: Prognose Heute
     float_precision: 1
     color: "#4dabf7"
@@ -415,7 +415,7 @@ series:
     show:
       in_chart: false
       in_header: true
-  - entity: sensor.house_load_forecast_tomorrow
+  - entity: sensor.hlf_forecast_tomorrow
     name: Morgen
     type: column
     color: "#ffa94d"
@@ -429,7 +429,7 @@ series:
         new Date(item.period_start).getTime(),
         item.load_estimate
       ]);
-  - entity: sensor.house_load_forecast_tomorrow
+  - entity: sensor.hlf_forecast_tomorrow
     name: Prognose Morgen
     color: "#ffa94d"
     unit: kWh
