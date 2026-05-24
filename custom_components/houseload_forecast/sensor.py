@@ -67,19 +67,19 @@ async def async_setup_entry(
         HauslastPrognoseMorgenSensor(coordinator, entry),
         AkkuRestlaufzeitSensor(coordinator, entry),
         DiagnosticSensor(coordinator, entry, "calculation_timestamp",
-                         "Letzte Aktualisierung Prognose", None, None, "mdi:clock-outline"),
+                         "Last Forecast Update", None, None, "mdi:clock-outline"),
         DiagnosticSensor(coordinator, entry, "data_days",
-                         "Anzahl Tage Datenbasis", "d", None, "mdi:database-clock"),
+                         "Data History Days", "d", None, "mdi:database-clock"),
         DiagnosticSensor(coordinator, entry, "soc_pct_raw",
-                         "Batterieladezustand", "%", None, "mdi:battery"),
+                         "Battery State of Charge", "%", None, "mdi:battery"),
         DiagnosticSensor(coordinator, entry, "bat_max_kwh",
-                         "Effektive Batteriekapazität", "kWh", None, "mdi:battery-high"),
+                         "Effective Battery Capacity", "kWh", None, "mdi:battery-high"),
         DiagnosticSensor(coordinator, entry, "bat_kwh",
-                         "Nutzbare Kapazität", "kWh", None, "mdi:battery-arrow-up"),
+                         "Usable Capacity", "kWh", None, "mdi:battery-arrow-up"),
         DiagnosticSensor(coordinator, entry, "bat_rest_kwh",
-                         "Restkapazität bis CutOff", "kWh", None, "mdi:battery-arrow-down-outline"),
+                         "Remaining Capacity to Cutoff", "kWh", None, "mdi:battery-arrow-down-outline"),
         DiagnosticSensor(coordinator, entry, "force_on",
-                         "Force-Export aktiv", None, None, "mdi:transmission-tower-export"),
+                         "Force Export Active", None, None, "mdi:transmission-tower-export"),
     ]
 
     async_add_entities(sensors, True)
@@ -549,7 +549,7 @@ class HauslastFallbackSensor(_HauslastBaseSensor):
         super().__init__(coordinator, entry)
         self._typ = typ
         self._attr_unique_id = f"{DOMAIN}_fallback_{typ}_{entry.entry_id}"
-        self._attr_name = f"Hauslast Fallback {'Wochentag' if typ == 'wochentag' else 'Wochenende'}"
+        self._attr_name = f"House Load Fallback {'Weekday' if typ == 'wochentag' else 'Weekend'}"
         self._attr_icon = "mdi:home-lightning-bolt"
 
     @property
@@ -570,7 +570,7 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_prognose_heute_{entry.entry_id}"
-        self._attr_name = "Hauslast Prognose Heute"
+        self._attr_name = "House Load Forecast Today"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -630,7 +630,7 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_prognose_morgen_{entry.entry_id}"
-        self._attr_name = "Hauslast Prognose Morgen"
+        self._attr_name = "House Load Forecast Tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -685,7 +685,7 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_akku_restlaufzeit_{entry.entry_id}"
-        self._attr_name = "PV Akku Restlaufzeit Prognose"
+        self._attr_name = "PV Battery Runtime Forecast"
         self._attr_native_unit_of_measurement = "min"
         self._attr_icon = "mdi:battery-clock"
         self._restored_value: int | None = None
