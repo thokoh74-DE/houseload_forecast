@@ -548,7 +548,8 @@ class HauslastFallbackSensor(_HauslastBaseSensor):
     def __init__(self, coordinator, typ: str, entry):
         super().__init__(coordinator, entry)
         self._typ = typ
-        self._attr_unique_id = f"{DOMAIN}_fallback_{typ}_{entry.entry_id}"
+        _typ_en = "weekday" if typ == "wochentag" else "weekend"
+        self._attr_unique_id = f"{DOMAIN}_fallback_{_typ_en}_{entry.entry_id}"
         self._attr_name = f"House Load Fallback {'Weekday' if typ == 'wochentag' else 'Weekend'}"
         self._attr_icon = "mdi:home-lightning-bolt"
 
@@ -569,7 +570,7 @@ class HauslastFallbackSensor(_HauslastBaseSensor):
 class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{DOMAIN}_prognose_heute_{entry.entry_id}"
+        self._attr_unique_id = f"{DOMAIN}_forecast_today_{entry.entry_id}"
         self._attr_name = "House Load Forecast Today"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
@@ -629,7 +630,7 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
 class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{DOMAIN}_prognose_morgen_{entry.entry_id}"
+        self._attr_unique_id = f"{DOMAIN}_forecast_tomorrow_{entry.entry_id}"
         self._attr_name = "House Load Forecast Tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
@@ -684,7 +685,7 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
 class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{DOMAIN}_akku_restlaufzeit_{entry.entry_id}"
+        self._attr_unique_id = f"{DOMAIN}_battery_runtime_{entry.entry_id}"
         self._attr_name = "PV Battery Runtime Forecast"
         self._attr_native_unit_of_measurement = "min"
         self._attr_icon = "mdi:battery-clock"
