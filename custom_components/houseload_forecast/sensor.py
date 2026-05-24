@@ -550,7 +550,8 @@ class HauslastFallbackSensor(_HauslastBaseSensor):
         self._typ = typ
         _typ_en = "weekday" if typ == "wochentag" else "weekend"
         self._attr_unique_id = f"{DOMAIN}_fallback_{_typ_en}_{entry.entry_id}"
-        self._attr_name = f"House Load Fallback {'Weekday' if typ == 'wochentag' else 'Weekend'}"
+        self._attr_translation_key = f"fallback_{_typ_en}"
+        self.entity_id = f"sensor.hlf_fallback_{_typ_en}"
         self._attr_icon = "mdi:home-lightning-bolt"
 
     @property
@@ -571,7 +572,8 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_forecast_today_{entry.entry_id}"
-        self._attr_name = "House Load Forecast Today"
+        self._attr_translation_key = "forecast_today"
+        self.entity_id = "sensor.hlf_forecast_today"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -631,7 +633,8 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_forecast_tomorrow_{entry.entry_id}"
-        self._attr_name = "House Load Forecast Tomorrow"
+        self._attr_translation_key = "forecast_tomorrow"
+        self.entity_id = "sensor.hlf_forecast_tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -686,7 +689,8 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_battery_runtime_{entry.entry_id}"
-        self._attr_name = "PV Battery Runtime Forecast"
+        self._attr_translation_key = "battery_runtime"
+        self.entity_id = "sensor.hlf_battery_runtime"
         self._attr_native_unit_of_measurement = "min"
         self._attr_icon = "mdi:battery-clock"
         self._restored_value: int | None = None
@@ -755,7 +759,8 @@ class DiagnosticSensor(_HauslastBaseSensor):
         super().__init__(coordinator, entry)
         self._field = field
         self._attr_unique_id = f"{DOMAIN}_diag_{field}_{entry.entry_id}"
-        self._attr_name = name
+        self._attr_translation_key = f"diag_{field}"
+        self.entity_id = f"sensor.hlf_diag_{field}"
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_icon = icon

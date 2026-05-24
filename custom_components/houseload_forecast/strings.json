@@ -309,10 +309,10 @@
                 "name": "Anzahl Tage Datenbasis"
             },
             "diag_bat_kwh": {
-                "name": "Nutzbare Kapazität in kWh"
+                "name": "Nutzbare Kapazität"
             },
             "diag_bat_max_kwh": {
-                "name": "Effektive Batteriekapazität in kWh"
+                "name": "Effektive Batteriekapazität"
             },
             "diag_usable_pct": {
                 "name": "Nutzbare Kapazität (%)"
@@ -321,13 +321,28 @@
                 "name": "Force-Export aktiv"
             },
             "diag_soc_pct_raw": {
-                "name": "Batterieladezustand (%)"
+                "name": "Batterieladezustand"
             },
             "diag_bat_rest_kwh": {
-                "name": "Restkapazität bis CutOff in kWh"
+                "name": "Restkapazität bis CutOff"
             },
             "diag_cutoff_kwh": {
                 "name": "Entladeschluss in kWh"
+            },
+            "forecast_today": {
+                "name": "Hauslast-Prognose Heute"
+            },
+            "forecast_tomorrow": {
+                "name": "Hauslast-Prognose Morgen"
+            },
+            "battery_runtime": {
+                "name": "PV Akku Restlaufzeit"
+            },
+            "fallback_weekday": {
+                "name": "Hauslast Fallback Wochentag"
+            },
+            "fallback_weekend": {
+                "name": "Hauslast Fallback Wochenende"
             }
         }
     }
