@@ -41,6 +41,49 @@ _LOGGER = logging.getLogger(__name__)
 
 DB_PATH = "/config/home-assistant_v2.db"
 
+# ── Übersetzungs-Hilfsfunktion ────────────────────────────────────────────────
+_SENSOR_NAMES_DE = {
+    "forecast_today":             "Hauslast-Prognose Heute",
+    "forecast_tomorrow":          "Hauslast-Prognose Morgen",
+    "battery_runtime":            "PV Akku Restlaufzeit",
+    "fallback_weekday":           "Hauslast Fallback Wochentag",
+    "fallback_weekend":           "Hauslast Fallback Wochenende",
+    "diag_calculation_timestamp": "Letzte Aktualisierung",
+    "diag_data_days":             "Anzahl Tage Datenbasis",
+    "diag_soc_pct_raw":           "Batterieladezustand",
+    "diag_bat_max_kwh":           "Effektive Batteriekapazität",
+    "diag_bat_kwh":               "Nutzbare Kapazität",
+    "diag_bat_rest_kwh":          "Restkapazität bis CutOff",
+    "diag_force_on":              "Force-Export aktiv",
+}
+
+_SENSOR_NAMES_EN = {
+    "forecast_today":             "House Load Forecast Today",
+    "forecast_tomorrow":          "House Load Forecast Tomorrow",
+    "battery_runtime":            "PV Battery Runtime",
+    "fallback_weekday":           "House Load Fallback Weekday",
+    "fallback_weekend":           "House Load Fallback Weekend",
+    "diag_calculation_timestamp": "Last Forecast Update",
+    "diag_data_days":             "Data History Days",
+    "diag_soc_pct_raw":           "Battery State of Charge",
+    "diag_bat_max_kwh":           "Effective Battery Capacity",
+    "diag_bat_kwh":               "Usable Capacity",
+    "diag_bat_rest_kwh":          "Remaining Capacity to Cutoff",
+    "diag_force_on":              "Force Export Active",
+}
+
+def _get_sensor_name(hass_or_none, translation_key: str) -> str:
+    """Liefert den Sensor-Namen passend zur HA-Systemsprache."""
+    try:
+        lang = hass_or_none.config.language if hass_or_none else "en"
+    except Exception:
+        lang = "en"
+    if lang.startswith("de"):
+        return _SENSOR_NAMES_DE.get(translation_key, translation_key)
+    return _SENSOR_NAMES_EN.get(translation_key, translation_key)
+
+
+
 # Python weekday(): 0=Mo, 1=Di, 2=Mi, 3=Do, 4=Fr, 5=Sa, 6=So
 # SQLite strftime('%w'): 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa
 # Mapping SQLite-dow → Python-weekday:
@@ -524,7 +567,7 @@ class HauslastCoordinator:
 # ── Sensor-Klassen ─────────────────────────────────────────────────────────────
 
 class _HauslastBaseSensor(SensorEntity):
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
 
     def __init__(self, coordinator: HauslastCoordinator, entry: ConfigEntry):
         self._coordinator = coordinator
@@ -540,6 +583,9 @@ class _HauslastBaseSensor(SensorEntity):
         }
 
     async def async_added_to_hass(self):
+        # Namen erst hier setzen, wenn hass verfügbar ist
+        if hasattr(self, "_translation_key_for_name"):
+            self._attr_name = _get_sensor_name(self.hass, self._translation_key_for_name)
         self.async_write_ha_state()
 
 
@@ -553,6 +599,7 @@ class HauslastFallbackSensor(_HauslastBaseSensor):
         _typ_en = "weekday" if typ == "wochentag" else "weekend"
         self._attr_unique_id = f"{DOMAIN}_fallback_{_typ_en}_{entry.entry_id}"
         self._attr_translation_key = f"fallback_{_typ_en}"
+        self._translation_key_for_name = f"fallback_{_typ_en}"
         self.entity_id = f"sensor.hlf_fallback_{_typ_en}"
         self._attr_icon = "mdi:home-lightning-bolt"
 
@@ -575,6 +622,7 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_forecast_today_{entry.entry_id}"
         self._attr_translation_key = "forecast_today"
+        self._translation_key_for_name = "forecast_today"
         self.entity_id = "sensor.hlf_forecast_today"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
@@ -636,6 +684,7 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_forecast_tomorrow_{entry.entry_id}"
         self._attr_translation_key = "forecast_tomorrow"
+        self._translation_key_for_name = "forecast_tomorrow"
         self.entity_id = "sensor.hlf_forecast_tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = SensorDeviceClass.ENERGY
@@ -692,6 +741,7 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{DOMAIN}_battery_runtime_{entry.entry_id}"
         self._attr_translation_key = "battery_runtime"
+        self._translation_key_for_name = "battery_runtime"
         self.entity_id = "sensor.hlf_battery_runtime"
         self._attr_native_unit_of_measurement = "min"
         self._attr_icon = "mdi:battery-clock"
@@ -762,6 +812,7 @@ class DiagnosticSensor(_HauslastBaseSensor):
         self._field = field
         self._attr_unique_id = f"{DOMAIN}_diag_{field}_{entry.entry_id}"
         self._attr_translation_key = f"diag_{field}"
+        self._translation_key_for_name = f"diag_{field}"
         self.entity_id = f"sensor.hlf_diag_{field}"
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
