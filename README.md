@@ -500,14 +500,15 @@ Das ist beabsichtigt – der letzte Wert wird per `RestoreEntity` wiederhergeste
 
 ## Changelog
 
-### 1.0.0
+Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md](CHANGELOG.md).
+
+### v1.1.0
+- Sensor-Namen und Entity-IDs auf Englisch umgestellt
+- Zweisprachige Einstellungen (Deutsch/Englisch)
+- Zwei README-Dateien (Deutsch + Englisch)
+
+### v1.0.0
 - Erstveröffentlichung auf HACS
-- 7 individuelle Tagesprofile (Mo–So)
-- IQR-Ausreißerfilter für historische Daten
-- Konfigurierbarer Datenzeitraum (Wochen)
-- Getrennte Einstellungsmenüs für Sensoren und Fallback-Profile
-- Restore-Funktion für Akku-Restlaufzeit nach Neustart
-- Brand-Icon über `brand/`-Ordner (HA ≥ 2026.3)
 
 ---
 

@@ -500,14 +500,15 @@ This is intentional — the last value is restored via `RestoreEntity` until the
 
 ## Changelog
 
-### 1.0.0
+The full changelog with all versions can be found in [CHANGELOG.md](CHANGELOG.md).
+
+### v1.1.0
+- Sensor names and entity IDs changed to English
+- Bilingual settings (German/English)
+- Two README files (German + English)
+
+### v1.0.0
 - Initial release on HACS
-- 7 individual daily profiles (Mon–Sun)
-- IQR outlier filter for historical data
-- Configurable history period (weeks)
-- Separate settings menus for sensors and fallback profiles
-- Restore function for battery runtime after restart
-- Brand icon via `brand/` folder (HA ≥ 2026.3)
 
 ---
 
