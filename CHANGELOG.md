@@ -16,7 +16,7 @@
 **SOC-Prognose: Zeitfenster ausgeweitet**
 - Der `soc_hourly_forecast` beginnt jetzt immer bei **00:00 Uhr** des heutigen Tages (statt erst bei der aktuellen Stunde).
 - Stunden von 00:00 bis zur aktuellen Stunde sind als `is_forecast: false` gekennzeichnet (Ist-Platzhalter mit aktuellem Akkustand).
-- Die echte Prognose läuft ab der aktuellen Stunde für die nächsten 24–48 h.
+- Die echte Prognose läuft ab der aktuellen Stunde für die nächsten **48 Stunden**.
 
 **SOC-Prognose: Prozent-Werte ergänzt**
 - Jeder Eintrag in `soc_hourly_forecast` enthält jetzt zusätzlich `soc_pct` (0–100 %).
@@ -31,9 +31,15 @@
 - Im `forecast`-Attribut von `sensor.hlf_forecast_today` fehlte bisher der Wert für 00:00 Uhr.
 - Der Forecast enthält jetzt immer alle 24 Stunden ab 00:00 des jeweiligen Tages.
 
+**Neuer optionaler Sensor: PV-Prognose Übermorgen**
+- Bisher endete die Prognose immer um 23:00 Uhr des Folgetages – unabhängig von der aktuellen Uhrzeit.
+- Mit dem neuen optionalen Sensor `pv_forecast_day_after_tomorrow_sensor` (Solcast-Sensor für übermorgen) wird die Simulation auf **72 Slots (3 Tage)** erweitert und dann auf **48 Stunden ab jetzt** zugeschnitten.
+- Der Sensor ist optional – ohne ihn verhält sich die Integration wie bisher.
+- Konfiguration unter: Einstellungen → Geräte & Dienste → Hauslast Prognose → Konfigurieren → Sensoren anpassen
+
 **Dashboard-Diagramme: Zeitfenster angepasst**
-- Akku-Prognose-Diagramm: Zeigt 00:00 bis +24 h ab aktueller Uhrzeit.
-- Hauslast-Prognose-Diagramm: Zeigt 00:00 bis +24 h ab aktueller Uhrzeit (inkl. 00:00-Wert).
+- Akku-Prognose-Diagramm: Zeigt 00:00 bis jetzt + 48 h.
+- Hauslast-Prognose-Diagramm: Zeigt 00:00 bis jetzt + 48 h (inkl. 00:00-Wert).
 
 ---
 
@@ -84,7 +90,7 @@
 **SOC forecast: Extended time window**
 - `soc_hourly_forecast` now always starts at **00:00** of the current day (instead of the current hour).
 - Hours from 00:00 to the current hour are marked as `is_forecast: false` (placeholder with current battery level).
-- The actual forecast runs from the current hour for the next 24–48 h.
+- The actual forecast runs from the current hour for the next **48 hours**.
 
 **SOC forecast: Percentage values added**
 - Each entry in `soc_hourly_forecast` now also contains `soc_pct` (0–100 %).
@@ -99,10 +105,15 @@
 - The `forecast` attribute of `sensor.hlf_forecast_today` was previously missing the 00:00 entry.
 - The forecast now always includes all 24 hours starting from 00:00 of the respective day.
 
-**Dashboard charts: Time window adjusted**
-- Battery forecast chart: Shows 00:00 to +24 h from current time.
-- House load forecast chart: Shows 00:00 to +24 h from current time (including 00:00 entry).
+**New optional sensor: PV Forecast Day After Tomorrow**
+- Previously the forecast always ended at 23:00 of the following day — regardless of the current time.
+- The new optional sensor `pv_forecast_day_after_tomorrow_sensor` (Solcast sensor for the day after tomorrow) extends the simulation to **72 slots (3 days)** and then trims it to **48 hours from now**.
+- The sensor is optional — without it the integration behaves as before.
+- Configure under: Settings → Devices & Services → House Load Forecast → Configure → Update sensors
 
+**Dashboard charts: Time window adjusted**
+- Battery forecast chart: Shows 00:00 to now + 48 h.
+- House load forecast chart: Shows 00:00 to now + 48 h (including 00:00 entry).
 ---
 
 ### v1.1.0
