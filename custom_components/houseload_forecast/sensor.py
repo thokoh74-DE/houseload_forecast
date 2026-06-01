@@ -41,6 +41,9 @@ _LOGGER = logging.getLogger(__name__)
 
 DB_PATH = "/config/home-assistant_v2.db"
 
+# Maximale Restlaufzeit in Minuten (48 h) – wird als "Akku reicht durch" interpretiert
+MAX_RUNTIME_MIN = 2880
+
 # ── Übersetzungs-Hilfsfunktion ────────────────────────────────────────────────
 _SENSOR_NAMES_DE = {
     "forecast_today":             "Hauslast-Prognose Heute",
@@ -55,6 +58,7 @@ _SENSOR_NAMES_DE = {
     "diag_bat_kwh":               "Nutzbare Kapazität",
     "diag_bat_rest_kwh":          "Restkapazität bis CutOff",
     "diag_force_on":              "Force-Export aktiv",
+    "diag_battery_empty_at":      "Akku leer um",
 }
 
 _SENSOR_NAMES_EN = {
@@ -70,6 +74,7 @@ _SENSOR_NAMES_EN = {
     "diag_bat_kwh":               "Usable Capacity",
     "diag_bat_rest_kwh":          "Remaining Capacity to Cutoff",
     "diag_force_on":              "Force Export Active",
+    "diag_battery_empty_at":      "Battery Empty At",
 }
 
 def _get_sensor_name(hass_or_none, translation_key: str) -> str:
@@ -83,10 +88,8 @@ def _get_sensor_name(hass_or_none, translation_key: str) -> str:
     return _SENSOR_NAMES_EN.get(translation_key, translation_key)
 
 
-
 # Python weekday(): 0=Mo, 1=Di, 2=Mi, 3=Do, 4=Fr, 5=Sa, 6=So
 # SQLite strftime('%w'): 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa
-# Mapping SQLite-dow → Python-weekday:
 _SQLITE_DOW_TO_PY = {0: 6, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5}
 
 
@@ -123,6 +126,9 @@ async def async_setup_entry(
                          "Remaining Capacity to Cutoff", "kWh", None, "mdi:battery-arrow-down-outline"),
         DiagnosticSensor(coordinator, entry, "force_on",
                          "Force Export Active", None, None, "mdi:transmission-tower-export"),
+        # NEU: Zeitpunkt Akku leer
+        DiagnosticSensor(coordinator, entry, "battery_empty_at",
+                         "Battery Empty At", None, None, "mdi:battery-alert"),
     ]
 
     async_add_entities(sensors, True)
@@ -155,15 +161,13 @@ class HauslastCoordinator:
     def __init__(self, hass, cfg, fallback_wt, fallback_we):
         self.hass = hass
         self.cfg = cfg
-        self.fallback_wt = fallback_wt  # 24-Werte Fallback Wochentag (allgemein)
-        self.fallback_we = fallback_we  # 24-Werte Fallback Wochenende (allgemein)
+        self.fallback_wt = fallback_wt
+        self.fallback_we = fallback_we
         self._entities: list = []
 
-        # 7 Tagesprofile (Python weekday 0=Mo … 6=So), je 24 Watt-Werte
         self.profiles: list[list[float]] = [[] for _ in range(7)]
         self.profile_sources: list[str] = [""] * 7
 
-        # Für Rückwärtskompatibilität der Sensor-Attribute
         self.profile_wt: list[float] = []
         self.profile_we: list[float] = []
         self.profile_source_wt: str = ""
@@ -193,9 +197,9 @@ class HauslastCoordinator:
         self.bat_rest_kwh: float = 0.0
         self.cutoff_kwh: float = 0.0
 
-        # Wird True sobald mindestens eine erfolgreiche Berechnung mit validen
-        # Sensor-Werten stattgefunden hat. Solange False bleibt restlaufzeit_min
-        # auf None (Restore-Wert des Sensors bleibt erhalten).
+        # NEU: Zeitpunkt Akku leer (None = reicht durch, False wenn MAX_RUNTIME)
+        self.battery_empty_at: str | bool = False
+
         self._has_valid_data: bool = False
 
     def async_register_entities(self, entities):
@@ -239,8 +243,6 @@ class HauslastCoordinator:
 
         self.calculation_timestamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # ── History-Wochen aus Config lesen ───────────────────────────
-        # 0 = unbegrenzt, sonst Anzahl Wochen
         raw_weeks = self.cfg.get(CONF_HISTORY_WEEKS, DEFAULT_HISTORY_WEEKS)
         try:
             history_weeks = int(raw_weeks)
@@ -253,10 +255,9 @@ class HauslastCoordinator:
             history_param = f"-{history_days} days"
             history_label = f"letzte {history_weeks} Wochen"
         else:
-            history_param = "-36500 days"   # ~100 Jahre = "alles"
+            history_param = "-36500 days"
             history_label = "gesamte Datenbasis"
 
-        # ── Datenbasis ermitteln ──────────────────────────────────────
         hauslast_id = self.cfg.get(CONF_HAUSLAST_STUNDLICH, "sensor.hauslast_stundlich")
         statistic_id = hauslast_id
 
@@ -278,7 +279,6 @@ class HauslastCoordinator:
             self.data_days = row[0] if row and row[0] else 0
 
             if self.data_days >= MIN_DATA_DAYS:
-                # Sensortyp aus statistics_meta ermitteln
                 cur.execute(
                     "SELECT has_mean, has_sum FROM statistics_meta WHERE statistic_id = ?",
                     (statistic_id,)
@@ -287,7 +287,6 @@ class HauslastCoordinator:
                 sensor_has_mean = meta_row and meta_row[0] == 1
 
                 if sensor_has_mean:
-                    # MEASUREMENT (W): mean-Spalte direkt verwenden
                     raw_sql = """
                         SELECT
                             CAST(strftime('%w', datetime(start_ts,'unixepoch','localtime')) AS INTEGER) AS sqlite_dow,
@@ -302,7 +301,6 @@ class HauslastCoordinator:
                     value_col = "mean (W)"
                     scale = 1.0
                 else:
-                    # TOTAL_INCREASING (kWh): state-Spalte enthält stündlichen Verbrauch
                     raw_sql = """
                         SELECT
                             CAST(strftime('%w', datetime(start_ts,'unixepoch','localtime')) AS INTEGER) AS sqlite_dow,
@@ -320,8 +318,6 @@ class HauslastCoordinator:
                 cur.execute(raw_sql, (statistic_id, history_param))
                 all_rows = cur.fetchall()
 
-                # Werte in Buckets je Wochentag (Python-weekday 0–6) und Stunde aufteilen
-                # buckets[weekday][hour] = [watt, watt, ...]
                 buckets: list[list[list[float]]] = [[[] for _ in range(24)] for _ in range(7)]
                 for sqlite_dow, hour, val in all_rows:
                     if val is None or val < 0:
@@ -330,7 +326,6 @@ class HauslastCoordinator:
                     buckets[py_wd][hour].append(float(val) * scale)
 
                 def iqr_filtered_mean(values: list[float], fallback: float) -> float:
-                    """Mittelwert nach IQR-Ausreißerfilter (Faktor 3)."""
                     if not values:
                         return fallback
                     s = sorted(values)
@@ -347,11 +342,9 @@ class HauslastCoordinator:
                         return round(sum(s) / n, 2)
                     return round(sum(clean) / len(clean), 2)
 
-                # Fallback-Profil je Wochentag bestimmen (WT=Mo–Fr, WE=Sa+So)
                 def fallback_for(py_wd: int) -> list[float]:
                     return self.fallback_we if py_wd >= 5 else self.fallback_wt
 
-                # Pro Wochentag Profil berechnen
                 for py_wd in range(7):
                     hours_with_data = sum(1 for h in range(24) if buckets[py_wd][h])
                     day_name = WEEKDAY_NAMES[py_wd].capitalize()
@@ -364,21 +357,12 @@ class HauslastCoordinator:
                         self.profile_sources[py_wd] = (
                             f"Historisch ({history_label}, {value_col}, IQR-gefiltert)"
                         )
-                        _LOGGER.debug(
-                            "%s-Profil: %d Stunden aus DB (%s)",
-                            day_name, hours_with_data, value_col
-                        )
                     else:
                         self.profiles[py_wd] = list(fb)
                         self.profile_sources[py_wd] = (
                             f"Fallback (zu wenige Daten für {day_name}: {hours_with_data} Stunden)"
                         )
-                        _LOGGER.warning(
-                            "%s-Profil: nur %d Stunden – Fallback",
-                            day_name, hours_with_data
-                        )
 
-                # Rückwärtskompatibilität: WT = Ø Mo–Fr, WE = Ø Sa+So
                 def avg_profiles(weekdays: list[int]) -> list[float]:
                     result = []
                     for h in range(24):
@@ -392,7 +376,6 @@ class HauslastCoordinator:
                 self.profile_source_we = f"Ø Wochenende (Sa+So), {history_label}"
 
             else:
-                # Zu wenige Daten → Fallback für alle 7 Tage
                 for py_wd in range(7):
                     fb = self.fallback_we if py_wd >= 5 else self.fallback_wt
                     self.profiles[py_wd] = list(fb)
@@ -403,10 +386,6 @@ class HauslastCoordinator:
                 self.profile_we = list(self.fallback_we)
                 self.profile_source_wt = f"Fallback (nur {self.data_days} Tage)"
                 self.profile_source_we = f"Fallback (nur {self.data_days} Tage)"
-                _LOGGER.info(
-                    "Hauslast-Profil: nur %d Datentage – Fallback für alle Tage",
-                    self.data_days
-                )
 
             con.close()
 
@@ -427,15 +406,11 @@ class HauslastCoordinator:
         self.soc_pct_raw      = self._get_float(self.cfg.get(CONF_BAT_SOC_SENSOR))
         self.cutoff_pct_raw   = self._get_float(self.cfg.get(CONF_BAT_CUTOFF_SENSOR))
 
-        # Sensoren noch nicht bereit (z.B. direkt nach Neustart)?
-        # Prüfe ob die Kernwerte plausibel sind: Kapazität > 0 und SoC > 0
         bat_sensors_ready = (
             self.bat_capacity_raw > 0
             and self.soc_pct_raw > 0
         )
         if not bat_sensors_ready:
-            # Abhängige Sensoren noch nicht verfügbar → keine neue Berechnung,
-            # restlaufzeit_min bleibt unverändert (Restore-Wert bleibt erhalten)
             _LOGGER.debug(
                 "Batterie-Sensoren noch nicht verfügbar (capacity=%.1f, soc=%.1f) – "
                 "überspringe Restlaufzeit-Berechnung",
@@ -443,9 +418,9 @@ class HauslastCoordinator:
             )
             return
 
-        self.usable_pct  = max(self.soc_pct_raw - self.cutoff_pct_raw, 0.0)
-        self.bat_max_kwh = self.bat_capacity_raw
-        self.bat_kwh     = self.soc_pct_raw / 100.0 * self.bat_max_kwh
+        self.usable_pct   = max(self.soc_pct_raw - self.cutoff_pct_raw, 0.0)
+        self.bat_max_kwh  = self.bat_capacity_raw
+        self.bat_kwh      = self.soc_pct_raw / 100.0 * self.bat_max_kwh
         self.bat_rest_kwh = max(self.usable_pct / 100.0 * self.bat_max_kwh, 0.0)
 
         # ── Force Export ───────────────────────────────────────────────
@@ -456,9 +431,14 @@ class HauslastCoordinator:
         self.force_kwh = self._get_float(self.cfg.get(CONF_FORCE_EXPORT_POWER)) if self.force_on else 0.0
 
         # ── Hauslast-Forecast aufbauen ─────────────────────────────────
-        now_local  = dt_util.now()
-        today_wd   = now_local.weekday()   # 0=Mo … 6=So
+        # FIX: Prognose von 00:00 Uhr heutigen Tages bis 23:00 Uhr morgen
+        # Anzeige: 00:00 – aktuelle Stunde = Ist-Werte (SOC), Rest = Prognose
+        now_local   = dt_util.now()
+        today_wd    = now_local.weekday()
         tomorrow_wd = (today_wd + 1) % 7
+
+        # Tagesbeginn heute 00:00
+        today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
 
         def build_forecast(profile: list[float], base_date) -> list[dict]:
             result = []
@@ -473,7 +453,8 @@ class HauslastCoordinator:
         profile_heute  = self.profiles[today_wd]   if self.profiles[today_wd]   else self.fallback_wt
         profile_morgen = self.profiles[tomorrow_wd] if self.profiles[tomorrow_wd] else self.fallback_wt
 
-        self.forecast_heute = build_forecast(profile_heute, now_local)
+        # FIX: forecast_heute startet bei 00:00 (nicht bei now_floor)
+        self.forecast_heute = build_forecast(profile_heute, today_start)
         self.forecast_morgen = build_forecast(
             profile_morgen,
             (now_local + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -488,21 +469,28 @@ class HauslastCoordinator:
         self.pv_hours_today_count  = len(pv_today_list)
         self.pv_hours_morgen_count = len(pv_morgen_list)
 
+        # Kombiniere heute + morgen für SOC-Simulation (48 h ab 00:00)
         hl_hours = self.forecast_heute + self.forecast_morgen
         pv_len = len(pv_hours)
         hl_len = len(hl_hours)
         max_h = min(max(pv_len, hl_len, 48), 48)
 
         # ── SOC-Stunden-Prognose ───────────────────────────────────────
-        now_ts        = now_local.timestamp()
-        now_floor     = now_local.replace(minute=0, second=0, microsecond=0)
-        now_floor_ts  = now_floor.timestamp()
-        next_hour_ts  = now_floor_ts + 3600.0
+        # SOC-Forecast:
+        #   - 00:00 bis aktuelle volle Stunde: bat_kwh (Ist-Wert) als Platzhalter
+        #     → wird im Dashboard durch tatsächlichen SOC-Verlauf überlagert
+        #   - Aktuelle volle Stunde bis +24 h (bzw. bis 23:00 morgen): Prognose
+
+        now_ts       = now_local.timestamp()
+        now_floor    = now_local.replace(minute=0, second=0, microsecond=0)
+        now_floor_ts = now_floor.timestamp()
+
+        # Anteil der aktuellen Stunde der noch verbleibt (für anteilige Berechnung)
+        next_hour_ts       = now_floor_ts + 3600.0
         remaining_fraction = (next_hour_ts - now_ts) / 3600.0
 
         soc = self.bat_kwh
         out: list[dict] = []
-        first_future_slot = True
 
         for i in range(max_h):
             if i < pv_len:
@@ -526,23 +514,40 @@ class HauslastCoordinator:
             except Exception:
                 slot_ts = now_floor_ts + i * 3600
 
-            if slot_ts < now_floor_ts:
-                continue
-
             pv_i  = float(pv_hours[i].get("pv_estimate", 0)) if i < pv_len else 0.0
             hl_i  = float(hl_hours[i].get("load_estimate", 0)) if i < hl_len else 0.0
             hl_i += self.force_kwh
 
-            if slot_ts == now_floor_ts:
-                out.append({"period_start": raw_ts, "soc_kwh": round(self.bat_kwh, 3)})
+            if slot_ts < now_floor_ts:
+                # Vergangenheit (00:00 bis aktuelle volle Stunde):
+                # bat_kwh als Ist-Platzhalter – Dashboard zeigt echten SOC-Verlauf
+                out.append({
+                    "period_start": raw_ts,
+                    "soc_kwh": round(self.bat_kwh, 3),
+                    "soc_pct": round(self.bat_kwh / self.bat_max_kwh * 100.0, 1) if self.bat_max_kwh > 0 else 0.0,
+                    "is_forecast": False,
+                })
+            elif slot_ts == now_floor_ts:
+                # Aktuelle volle Stunde: Ist-Wert + anteilige Prognose
+                out.append({
+                    "period_start": raw_ts,
+                    "soc_kwh": round(self.bat_kwh, 3),
+                    "soc_pct": round(self.bat_kwh / self.bat_max_kwh * 100.0, 1) if self.bat_max_kwh > 0 else 0.0,
+                    "is_forecast": False,
+                })
                 soc = self.bat_kwh + (pv_i - hl_i) * remaining_fraction
                 soc = max(0.0, min(soc, self.bat_max_kwh))
             else:
-                if first_future_slot:
-                    first_future_slot = False
+                # Zukunft: Prognose
                 soc = soc + (pv_i - hl_i)
                 soc = max(0.0, min(soc, self.bat_max_kwh))
-                out.append({"period_start": raw_ts, "soc_kwh": round(soc, 3)})
+                soc_pct = round(soc / self.bat_max_kwh * 100.0, 1) if self.bat_max_kwh > 0 else 0.0
+                out.append({
+                    "period_start": raw_ts,
+                    "soc_kwh": round(soc, 3),
+                    "soc_pct": soc_pct,
+                    "is_forecast": True,
+                })
 
         self.soc_forecast = out
         self.soc_slots_processed = len(out)
@@ -550,17 +555,31 @@ class HauslastCoordinator:
         # ── Restlaufzeit berechnen ─────────────────────────────────────
         cutoff_kwh = self.cutoff_pct_raw / 100.0 * self.bat_max_kwh
         self.cutoff_kwh = cutoff_kwh
-        self.restlaufzeit_min = max_h * 60
+
+        # Debounce: Nur Zukunfts-Slots (is_forecast=True) für Restlaufzeit prüfen
+        runtime_found = False
+        self.restlaufzeit_min = MAX_RUNTIME_MIN
+        self.battery_empty_at = False  # False = reicht durch
+
         for entry in out:
+            if not entry.get("is_forecast", False):
+                continue
             try:
                 slot_ts = datetime.fromisoformat(entry["period_start"]).timestamp()
             except Exception:
                 continue
             if entry["soc_kwh"] <= cutoff_kwh and slot_ts > now_ts:
                 self.restlaufzeit_min = int((slot_ts - now_ts) / 60)
+                # Zeitpunkt als lesbarer String
+                empty_dt = datetime.fromisoformat(entry["period_start"])
+                self.battery_empty_at = empty_dt.strftime("%Y-%m-%d %H:%M")
+                runtime_found = True
                 break
 
-        # Berechnung war erfolgreich mit validen Werten
+        if not runtime_found:
+            self.restlaufzeit_min = MAX_RUNTIME_MIN
+            self.battery_empty_at = False
+
         self._has_valid_data = True
 
 
@@ -583,7 +602,6 @@ class _HauslastBaseSensor(SensorEntity):
         }
 
     async def async_added_to_hass(self):
-        # Namen erst hier setzen, wenn hass verfügbar ist
         if hasattr(self, "_translation_key_for_name"):
             self._attr_name = _get_sensor_name(self.hass, self._translation_key_for_name)
         self.async_write_ha_state()
@@ -660,8 +678,8 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
             "wochentag": today_name,
             "profil_quelle_heute": c.profile_sources[today_wd],
             "forecast_kwh_rest": round(rest, 3),
+            # FIX: forecast enthält jetzt alle 24 h ab 00:00
             "forecast": c.forecast_heute,
-            # alle 7 Tagesprofile
             "profile_montag":     c.profiles[0],
             "profile_dienstag":   c.profiles[1],
             "profile_mittwoch":   c.profiles[2],
@@ -669,7 +687,6 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
             "profile_freitag":    c.profiles[4],
             "profile_samstag":    c.profiles[5],
             "profile_sonntag":    c.profiles[6],
-            # Diagnostik
             "bat_kwh": round(c.bat_kwh, 3),
             "bat_max_kwh": round(c.bat_max_kwh, 3),
         }
@@ -718,7 +735,6 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
             "profil_quelle_morgen": c.profile_sources[tomorrow_wd],
             "forecast_kwh_morgen": round(total, 3),
             "forecast": c.forecast_morgen,
-            # alle 7 Tagesprofile
             "profile_montag":     c.profiles[0],
             "profile_dienstag":   c.profiles[1],
             "profile_mittwoch":   c.profiles[2],
@@ -726,7 +742,6 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
             "profile_freitag":    c.profiles[4],
             "profile_samstag":    c.profiles[5],
             "profile_sonntag":    c.profiles[6],
-            # Diagnostik
             "bat_kwh": round(c.bat_kwh, 3),
             "bat_max_kwh": round(c.bat_max_kwh, 3),
         }
@@ -748,24 +763,17 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
         self._restored_value: int | None = None
 
     async def async_added_to_hass(self):
-        """Letzten bekannten Wert beim Start wiederherstellen."""
         await super().async_added_to_hass()
         last_state = await self.async_get_last_state()
         if last_state is not None and last_state.state not in ("unknown", "unavailable", "None", ""):
             try:
                 self._restored_value = int(float(last_state.state))
-                _LOGGER.debug(
-                    "Restlaufzeit: letzter Wert wiederhergestellt: %d min",
-                    self._restored_value
-                )
             except (ValueError, TypeError):
                 self._restored_value = None
         self.async_write_ha_state()
 
     @property
     def native_value(self):
-        # Solange noch keine valide Neuberechnung stattgefunden hat,
-        # den wiederhergestellten Wert zurückgeben statt 0.
         if not self._coordinator._has_valid_data:
             return self._restored_value
         return self._coordinator.restlaufzeit_min
@@ -773,12 +781,17 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
     @property
     def extra_state_attributes(self):
         c = self._coordinator
+        # battery_empty_at: False wenn Akku reicht (MAX_RUNTIME), sonst Zeitstempel-String
+        empty_at = c.battery_empty_at
         return {
             "calculation_timestamp": c.calculation_timestamp,
             "data_days": c.data_days,
             "history_weeks": c.history_weeks_used if c.history_weeks_used > 0 else "unbegrenzt",
             "bat_kwh": round(c.bat_kwh, 3),
             "bat_max_kwh": round(c.bat_max_kwh, 3),
+            "bat_soc_pct": round(c.soc_pct_raw, 1),
+            # NEU: Zeitpunkt Akku leer (False = reicht durch)
+            "battery_empty_at": empty_at,
             "diag_cutoff_kwh": round(c.cutoff_kwh, 3),
             "diag_bat_kapazitaet_kwh": round(c.bat_capacity_raw, 3),
             "diag_soc_pct": round(c.soc_pct_raw, 1),
@@ -794,6 +807,7 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
             "diag_hauslast_slots_heute": c.hauslast_slots_heute,
             "diag_hauslast_slots_morgen": c.hauslast_slots_morgen,
             "diag_soc_slots_verarbeitet": c.soc_slots_processed,
+            # soc_hourly_forecast enthält jetzt soc_kwh, soc_pct und is_forecast
             "soc_hourly_forecast": c.soc_forecast,
         }
 

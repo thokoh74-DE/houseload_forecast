@@ -105,7 +105,7 @@ forecast:
     load_estimate: 0.43       # kWh für diese Stunde
   - period_start: "2026-05-24T01:00:00+02:00"
     load_estimate: 0.42
-  # ... 24 Einträge gesamt
+  # ... 24 Einträge gesamt, immer ab 00:00 Uhr
 profile_montag: [435, 420, ...]   # 24 Watt-Werte
 profile_dienstag: [...]
 # ... alle 7 Tagesprofile
@@ -119,16 +119,23 @@ data_days: 56
 
 ```yaml
 soc_hourly_forecast:
-  - period_start: "2026-05-24T16:00:00+02:00"
+  - period_start: "2026-05-24T00:00:00+02:00"
     soc_kwh: 7.8
-  - period_start: "2026-05-24T17:00:00+02:00"
-    soc_kwh: 7.2
-  # ... bis zu 48 Einträge
+    soc_pct: 100.0          # NEU: 100% = bat_max_kwh, 0% = 0 kWh
+    is_forecast: false       # NEU: false = Ist-Platzhalter (vor aktueller Stunde)
+  - period_start: "2026-05-24T09:00:00+02:00"
+    soc_kwh: 5.2
+    soc_pct: 66.8
+    is_forecast: true        # true = Prognosewert
+  # ... bis zu 48 Einträge, ab 00:00 Uhr des heutigen Tages
+battery_empty_at: "2026-05-25T04:00"   # Zeitpunkt Akku leer – oder false wenn Akku reicht
 bat_kwh: 7.8
 bat_max_kwh: 7.78
-diag_soc_pct: 100.0
+bat_soc_pct: 100.0
 diag_cutoff_pct: 10.0
 ```
+
+> **Hinweis zu `battery_empty_at`:** `false` bedeutet, der Akku reicht laut Prognose durch den gesamten 48-h-Horizont (= 2880 min Restlaufzeit). Andernfalls steht hier der Zeitpunkt als `YYYY-MM-DD HH:MM`.
 
 ### Diagnose-Sensoren
 
@@ -143,6 +150,7 @@ Alle Diagnose-Sensoren erscheinen auf der Gerätseite unter **„Diagnose"** und
 | Usable Capacity | Aktuell nutzbare Energie in kWh |
 | Remaining Capacity to Cutoff | Verbleibende Energie bis Entladeschluss |
 | Force Export Active | Status des Force-Export-Modus |
+| Battery Empty At | Zeitpunkt Akku leer laut Prognose (false = reicht durch) |
 
 ---
 

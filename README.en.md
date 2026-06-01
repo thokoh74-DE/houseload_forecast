@@ -105,7 +105,7 @@ forecast:
     load_estimate: 0.43       # kWh for this hour
   - period_start: "2026-05-24T01:00:00+02:00"
     load_estimate: 0.42
-  # ... 24 entries total
+  # ... 24 entries total, always starting from 00:00
 profile_montag: [435, 420, ...]   # 24 watt values
 profile_dienstag: [...]
 # ... all 7 daily profiles
@@ -119,16 +119,23 @@ data_days: 56
 
 ```yaml
 soc_hourly_forecast:
-  - period_start: "2026-05-24T16:00:00+02:00"
+  - period_start: "2026-05-24T00:00:00+02:00"
     soc_kwh: 7.8
-  - period_start: "2026-05-24T17:00:00+02:00"
-    soc_kwh: 7.2
-  # ... up to 48 entries
+    soc_pct: 100.0            # NEW: 100% = bat_max_kwh, 0% = 0 kWh
+    is_forecast: false         # NEW: false = actual placeholder (before current hour)
+  - period_start: "2026-05-24T09:00:00+02:00"
+    soc_kwh: 5.2
+    soc_pct: 66.8
+    is_forecast: true          # true = forecast value
+  # ... up to 48 entries, starting from 00:00 of today
+battery_empty_at: "2026-05-25T04:00"   # time battery runs empty – or false if it lasts
 bat_kwh: 7.8
 bat_max_kwh: 7.78
-diag_soc_pct: 100.0
+bat_soc_pct: 100.0
 diag_cutoff_pct: 10.0
 ```
+
+> **Note on `battery_empty_at`:** `false` means the battery is forecast to last through the full 48-h horizon (= 2880 min runtime). Otherwise the timestamp is provided as `YYYY-MM-DD HH:MM`.
 
 ### Diagnostic Sensors
 
@@ -143,6 +150,7 @@ All diagnostic sensors appear on the device page under **"Diagnostics"** and are
 | Usable capacity | Currently usable energy in kWh |
 | Remaining capacity to cutoff | Remaining energy until discharge cutoff |
 | Force export active | Status of force export mode |
+| Battery Empty At | Forecast time when battery runs empty (false = lasts through) |
 
 ---
 

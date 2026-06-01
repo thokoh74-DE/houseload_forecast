@@ -6,6 +6,37 @@
 
 ## Deutsch
 
+### v1.1.1
+
+**Akku-Restlaufzeit: Sprünge durch Debounce behoben**
+- Der Sensor `sensor.hlf_battery_runtime` sprang kurz nach dem Neustart oder bei instabilen Sensorwerten zwischen dem Maximalwert (2880 min) und dem echten Prognosewert.
+- Ursache: Vergangene Slots (00:00 bis aktuelle Stunde) wurden fälschlicherweise in die Restlaufzeit-Berechnung einbezogen.
+- Fix: Nur Slots mit `is_forecast: true` werden für die Restlaufzeit-Berechnung herangezogen.
+
+**SOC-Prognose: Zeitfenster ausgeweitet**
+- Der `soc_hourly_forecast` beginnt jetzt immer bei **00:00 Uhr** des heutigen Tages (statt erst bei der aktuellen Stunde).
+- Stunden von 00:00 bis zur aktuellen Stunde sind als `is_forecast: false` gekennzeichnet (Ist-Platzhalter mit aktuellem Akkustand).
+- Die echte Prognose läuft ab der aktuellen Stunde für die nächsten 24–48 h.
+
+**SOC-Prognose: Prozent-Werte ergänzt**
+- Jeder Eintrag in `soc_hourly_forecast` enthält jetzt zusätzlich `soc_pct` (0–100 %).
+- 100 % = volle Akkukapazität (`bat_max_kwh`), 0 % = 0 kWh (nicht Cutoff).
+
+**Neuer Diagnosesensor: `battery_empty_at`**
+- Zeigt den Zeitpunkt an, zu dem der Akku laut Prognose leer wird (Format: `YYYY-MM-DD HH:MM`).
+- Wert `false` bedeutet: Der Akku reicht laut Prognose durch den gesamten 48-h-Horizont (entspricht 2880 min Restlaufzeit).
+- Auch als Attribut `battery_empty_at` im `sensor.hlf_battery_runtime` verfügbar.
+
+**Hauslast-Prognose: Fehlender 00:00-Wert behoben**
+- Im `forecast`-Attribut von `sensor.hlf_forecast_today` fehlte bisher der Wert für 00:00 Uhr.
+- Der Forecast enthält jetzt immer alle 24 Stunden ab 00:00 des jeweiligen Tages.
+
+**Dashboard-Diagramme: Zeitfenster angepasst**
+- Akku-Prognose-Diagramm: Zeigt 00:00 bis +24 h ab aktueller Uhrzeit.
+- Hauslast-Prognose-Diagramm: Zeigt 00:00 bis +24 h ab aktueller Uhrzeit (inkl. 00:00-Wert).
+
+---
+
 ### v1.1.0
 **Sensor-Namen & Entity-IDs auf Englisch umgestellt**
 - Alle Sensor-Anzeigenamen und Entity-IDs sind jetzt englisch:
@@ -42,6 +73,37 @@
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v1.1.1
+
+**Battery runtime: Fixed value jumps via debounce**
+- `sensor.hlf_battery_runtime` was briefly jumping between the maximum value (2880 min) and the real forecast value after restarts or with unstable sensor readings.
+- Root cause: Past slots (00:00 to current hour) were incorrectly included in the runtime calculation.
+- Fix: Only slots with `is_forecast: true` are used for the runtime calculation.
+
+**SOC forecast: Extended time window**
+- `soc_hourly_forecast` now always starts at **00:00** of the current day (instead of the current hour).
+- Hours from 00:00 to the current hour are marked as `is_forecast: false` (placeholder with current battery level).
+- The actual forecast runs from the current hour for the next 24–48 h.
+
+**SOC forecast: Percentage values added**
+- Each entry in `soc_hourly_forecast` now also contains `soc_pct` (0–100 %).
+- 100 % = full battery capacity (`bat_max_kwh`), 0 % = 0 kWh (not cutoff).
+
+**New diagnostic sensor: `battery_empty_at`**
+- Shows the point in time when the battery is forecast to be empty (format: `YYYY-MM-DD HH:MM`).
+- Value `false` means: the battery is forecast to last through the full 48-h horizon (equivalent to 2880 min runtime).
+- Also available as attribute `battery_empty_at` on `sensor.hlf_battery_runtime`.
+
+**House load forecast: Missing 00:00 value fixed**
+- The `forecast` attribute of `sensor.hlf_forecast_today` was previously missing the 00:00 entry.
+- The forecast now always includes all 24 hours starting from 00:00 of the respective day.
+
+**Dashboard charts: Time window adjusted**
+- Battery forecast chart: Shows 00:00 to +24 h from current time.
+- House load forecast chart: Shows 00:00 to +24 h from current time (including 00:00 entry).
+
+---
 
 ### v1.1.0
 **Sensor names & entity IDs changed to English**
