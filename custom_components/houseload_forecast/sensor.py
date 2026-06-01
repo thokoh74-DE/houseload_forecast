@@ -24,6 +24,7 @@ from .const import (
     CONF_BAT_CUTOFF_SENSOR,
     CONF_PV_TODAY_SENSOR,
     CONF_PV_TOMORROW_SENSOR,
+    CONF_PV_DAY_AFTER_TOMORROW_SENSOR,
     CONF_FORCE_EXPORT_BOOLEAN,
     CONF_FORCE_EXPORT_POWER,
     CONF_HAUSLAST_STUNDLICH,
@@ -140,6 +141,7 @@ async def async_setup_entry(
         cfg.get(CONF_BAT_CUTOFF_SENSOR),
         cfg.get(CONF_PV_TODAY_SENSOR),
         cfg.get(CONF_PV_TOMORROW_SENSOR),
+        cfg.get(CONF_PV_DAY_AFTER_TOMORROW_SENSOR),
         cfg.get(CONF_FORCE_EXPORT_BOOLEAN),
         cfg.get(CONF_FORCE_EXPORT_POWER),
         cfg.get(CONF_HAUSLAST_STUNDLICH),
@@ -175,6 +177,7 @@ class HauslastCoordinator:
 
         self.forecast_heute: list[dict] = []
         self.forecast_morgen: list[dict] = []
+        self.forecast_uebermorgen: list[dict] = []
         self.soc_forecast: list[dict] = []
         self.restlaufzeit_min: int = 0
         self.bat_kwh: float = 0.0
@@ -191,8 +194,10 @@ class HauslastCoordinator:
         self.force_kwh: float = 0.0
         self.pv_hours_today_count: int = 0
         self.pv_hours_morgen_count: int = 0
+        self.pv_hours_day_after_count: int = 0
         self.hauslast_slots_heute: int = 0
         self.hauslast_slots_morgen: int = 0
+        self.hauslast_slots_uebermorgen: int = 0
         self.soc_slots_processed: int = 0
         self.bat_rest_kwh: float = 0.0
         self.cutoff_kwh: float = 0.0
@@ -201,6 +206,10 @@ class HauslastCoordinator:
         self.battery_empty_at: str | bool = False
 
         self._has_valid_data: bool = False
+
+        # Einmalig gespeicherte Vergangenheits-Slots (werden nicht überschrieben)
+        self._frozen_past_slots: list[dict] = []
+        self._frozen_past_date: str = ""
 
     def async_register_entities(self, entities):
         self._entities = entities
@@ -242,6 +251,13 @@ class HauslastCoordinator:
         import sqlite3
 
         self.calculation_timestamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Vergangenheits-Cache täglich um Mitternacht leeren
+        today_str = dt_util.now().strftime("%Y-%m-%d")
+        if self._frozen_past_date != today_str:
+            self._frozen_past_slots = []
+            self._frozen_past_date = today_str
+
 
         raw_weeks = self.cfg.get(CONF_HISTORY_WEEKS, DEFAULT_HISTORY_WEEKS)
         try:
@@ -450,8 +466,11 @@ class HauslastCoordinator:
                 })
             return result
 
-        profile_heute  = self.profiles[today_wd]   if self.profiles[today_wd]   else self.fallback_wt
-        profile_morgen = self.profiles[tomorrow_wd] if self.profiles[tomorrow_wd] else self.fallback_wt
+        day_after_wd = (today_wd + 2) % 7
+
+        profile_heute       = self.profiles[today_wd]      if self.profiles[today_wd]      else self.fallback_wt
+        profile_morgen      = self.profiles[tomorrow_wd]   if self.profiles[tomorrow_wd]   else self.fallback_wt
+        profile_uebermorgen = self.profiles[day_after_wd]  if self.profiles[day_after_wd]  else self.fallback_wt
 
         # FIX: forecast_heute startet bei 00:00 (nicht bei now_floor)
         self.forecast_heute = build_forecast(profile_heute, today_start)
@@ -459,21 +478,29 @@ class HauslastCoordinator:
             profile_morgen,
             (now_local + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         )
-        self.hauslast_slots_heute  = len(self.forecast_heute)
-        self.hauslast_slots_morgen = len(self.forecast_morgen)
+        self.forecast_uebermorgen = build_forecast(
+            profile_uebermorgen,
+            (now_local + timedelta(days=2)).replace(hour=0, minute=0, second=0, microsecond=0)
+        )
+        self.hauslast_slots_heute      = len(self.forecast_heute)
+        self.hauslast_slots_morgen     = len(self.forecast_morgen)
+        self.hauslast_slots_uebermorgen = len(self.forecast_uebermorgen)
 
         # ── PV-Forecast aus Solcast-Attributen ────────────────────────
-        pv_today_list  = self._get_attr(self.cfg.get(CONF_PV_TODAY_SENSOR),    "detailedHourly", []) or []
-        pv_morgen_list = self._get_attr(self.cfg.get(CONF_PV_TOMORROW_SENSOR), "detailedHourly", []) or []
-        pv_hours = list(pv_today_list) + list(pv_morgen_list)
-        self.pv_hours_today_count  = len(pv_today_list)
-        self.pv_hours_morgen_count = len(pv_morgen_list)
+        pv_today_list     = self._get_attr(self.cfg.get(CONF_PV_TODAY_SENSOR),              "detailedHourly", []) or []
+        pv_morgen_list    = self._get_attr(self.cfg.get(CONF_PV_TOMORROW_SENSOR),           "detailedHourly", []) or []
+        pv_day_after_list = self._get_attr(self.cfg.get(CONF_PV_DAY_AFTER_TOMORROW_SENSOR), "detailedHourly", []) or []
+        pv_hours = list(pv_today_list) + list(pv_morgen_list) + list(pv_day_after_list)
+        self.pv_hours_today_count    = len(pv_today_list)
+        self.pv_hours_morgen_count   = len(pv_morgen_list)
+        self.pv_hours_day_after_count = len(pv_day_after_list)
 
-        # Kombiniere heute + morgen für SOC-Simulation (48 h ab 00:00)
-        hl_hours = self.forecast_heute + self.forecast_morgen
+        # Kombiniere heute + morgen + übermorgen für SOC-Simulation (72 h ab 00:00, davon 48 h ab jetzt)
+        hl_hours = self.forecast_heute + self.forecast_morgen + self.forecast_uebermorgen
         pv_len = len(pv_hours)
         hl_len = len(hl_hours)
-        max_h = min(max(pv_len, hl_len, 48), 48)
+        # 72 Slots laden (3 Tage), SOC-Ausgabe aber auf 48h ab jetzt begrenzen
+        max_h = min(max(pv_len, hl_len, 72), 72)
 
         # ── SOC-Stunden-Prognose ───────────────────────────────────────
         # SOC-Forecast:
@@ -485,7 +512,7 @@ class HauslastCoordinator:
         now_floor    = now_local.replace(minute=0, second=0, microsecond=0)
         now_floor_ts = now_floor.timestamp()
 
-        # Anteil der aktuellen Stunde der noch verbleibt (für anteilige Berechnung)
+        # Anteil der aktuellen Stunde die noch verbleibt (für anteilige Berechnung)
         next_hour_ts       = now_floor_ts + 3600.0
         remaining_fraction = (next_hour_ts - now_ts) / 3600.0
 
@@ -519,24 +546,43 @@ class HauslastCoordinator:
             hl_i += self.force_kwh
 
             if slot_ts < now_floor_ts:
-                # Vergangenheit (00:00 bis aktuelle volle Stunde):
-                # bat_kwh als Ist-Platzhalter – Dashboard zeigt echten SOC-Verlauf
-                out.append({
-                    "period_start": raw_ts,
-                    "soc_kwh": round(self.bat_kwh, 3),
-                    "soc_pct": round(self.bat_kwh / self.bat_max_kwh * 100.0, 1) if self.bat_max_kwh > 0 else 0.0,
-                    "is_forecast": False,
-                })
+                # ── Vergangenheit: eingefrorenen Wert wiederverwenden ──
+                # Einmal gespeicherte Werte werden nie überschrieben,
+                # damit sich vergangene Slots bei Neuberechnung nicht ändern.
+                frozen = next(
+                    (s for s in self._frozen_past_slots
+                     if s["period_start"] == raw_ts),
+                    None
+                )
+                if frozen:
+                    out.append(frozen)
+                    soc = frozen["soc_kwh"]
+                else:
+                    # Erster Aufruf für diesen Slot: aktuellen bat_kwh einfrieren
+                    entry = {
+                        "period_start": raw_ts,
+                        "soc_kwh": round(self.bat_kwh, 3),
+                        "soc_pct": round(self.bat_kwh / self.bat_max_kwh * 100.0, 1)
+                                   if self.bat_max_kwh > 0 else 0.0,
+                        "is_forecast": False,
+                    }
+                    self._frozen_past_slots.append(entry)
+                    out.append(entry)
+                    soc = entry["soc_kwh"]
+
             elif slot_ts == now_floor_ts:
-                # Aktuelle volle Stunde: Ist-Wert + anteilige Prognose
-                out.append({
+                # Aktuelle volle Stunde: Ist-Wert, kein Einfrieren (ändert sich jede Minute)
+                entry = {
                     "period_start": raw_ts,
                     "soc_kwh": round(self.bat_kwh, 3),
-                    "soc_pct": round(self.bat_kwh / self.bat_max_kwh * 100.0, 1) if self.bat_max_kwh > 0 else 0.0,
+                    "soc_pct": round(self.bat_kwh / self.bat_max_kwh * 100.0, 1)
+                               if self.bat_max_kwh > 0 else 0.0,
                     "is_forecast": False,
-                })
+                }
+                out.append(entry)
                 soc = self.bat_kwh + (pv_i - hl_i) * remaining_fraction
                 soc = max(0.0, min(soc, self.bat_max_kwh))
+
             else:
                 # Zukunft: Prognose
                 soc = soc + (pv_i - hl_i)
@@ -549,8 +595,14 @@ class HauslastCoordinator:
                     "is_forecast": True,
                 })
 
-        self.soc_forecast = out
-        self.soc_slots_processed = len(out)
+        # Ausgabe auf 48h ab jetzt begrenzen (ältere + zukünftige Slots bis now+48h)
+        cutoff_48h_ts = now_ts + 48 * 3600.0
+        out_48h = [
+            e for e in out
+            if datetime.fromisoformat(e["period_start"]).timestamp() <= cutoff_48h_ts
+        ]
+        self.soc_forecast = out_48h
+        self.soc_slots_processed = len(out_48h)
 
         # ── Restlaufzeit berechnen ─────────────────────────────────────
         cutoff_kwh = self.cutoff_pct_raw / 100.0 * self.bat_max_kwh
@@ -561,7 +613,7 @@ class HauslastCoordinator:
         self.restlaufzeit_min = MAX_RUNTIME_MIN
         self.battery_empty_at = False  # False = reicht durch
 
-        for entry in out:
+        for entry in out_48h:
             if not entry.get("is_forecast", False):
                 continue
             try:
@@ -804,8 +856,10 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
             },
             "diag_pv_stunden_heute": c.pv_hours_today_count,
             "diag_pv_stunden_morgen": c.pv_hours_morgen_count,
+            "diag_pv_stunden_uebermorgen": c.pv_hours_day_after_count,
             "diag_hauslast_slots_heute": c.hauslast_slots_heute,
             "diag_hauslast_slots_morgen": c.hauslast_slots_morgen,
+            "diag_hauslast_slots_uebermorgen": c.hauslast_slots_uebermorgen,
             "diag_soc_slots_verarbeitet": c.soc_slots_processed,
             # soc_hourly_forecast enthält jetzt soc_kwh, soc_pct und is_forecast
             "soc_hourly_forecast": c.soc_forecast,

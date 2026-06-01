@@ -67,6 +67,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | Entladeschluss / Reserve | Sensor für den minimalen SoC in % (z.B. `10` für 10 % Reserve) |
 | PV-Prognose Heute | Solcast-Sensor mit `detailedHourly`-Attribut für heute |
 | PV-Prognose Morgen | Solcast-Sensor mit `detailedHourly`-Attribut für morgen |
+| PV-Prognose Übermorgen | Optional: Solcast-Sensor für übermorgen – wird für eine echte 48h-Prognose ab jetzt benötigt |
 | Force Export Active | Optional: `input_boolean` für Force-Export-Modus |
 | Force-Export Leistung | Optional: `number`-Entität mit der Export-Leistung in kW |
 | Hauslast stündlich | Stündlicher Verbrauchssensor, der in der HA-Statistik erfasst ist |
@@ -93,7 +94,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 |---|---|---|
 | `sensor.hlf_forecast_today` | kWh | Tagesprognose Hauslast für heute (House Load Forecast Today) |
 | `sensor.hlf_forecast_tomorrow` | kWh | Tagesprognose Hauslast für morgen (House Load Forecast Tomorrow) |
-| `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
+| `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **48 Stunden ab jetzt** (heute + morgen + übermorgen). Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
 
 ### Wichtige Attribute
 
@@ -174,7 +175,13 @@ Der **IQR-Ausreißerfilter** entfernt Werte außerhalb von `[Q1 − 3×IQR, Q3 +
 
 ### Akku-Prognose (ApexCharts)
 
-Zeigt den aktuellen Batterieladezustand (blau) und die SOC-Prognose der nächsten 48 Stunden (orange gestrichelt).
+Zeigt den echten Batterieladezustand aus dem Historian (blau) und die SOC-Prognose ab der aktuellen Stunde (orange gestrichelt) – beides in Prozent auf einer gemeinsamen Y-Achse.
+
+**Zeitfenster:** 00:00 Uhr heute bis jetzt + 24 Stunden.
+
+- **Battery (Ist):** Historischer SOC-Verlauf aus `sensor.alphaess_soc_battery` (wird automatisch bis „Jetzt" gezeichnet)
+- **Prognose-SOC:** Prognostizierter SOC ab aktueller Stunde aus `soc_hourly_forecast` (nur Einträge mit `is_forecast: true`)
+- **Kopfzeile:** Aktueller SoC in %, Ist-SOC in kWh, verbleibende Restlaufzeit in Minuten
 
 ![Akku-Prognose Dashboard](docs/images/screenshot_akku_prognose.png)
 
@@ -204,7 +211,7 @@ all_series_config:
     legend_value: false
 series:
   - entity: sensor.alphaess_soc_battery
-    name: Battery
+    name: Battery (Ist)
     transform: return x;
     yaxis_id: battery
     type: area
@@ -212,7 +219,7 @@ series:
     extend_to: now
     curve: smooth
     fill_raw: last
-    opacity: 0.6
+    opacity: 0.5
     stroke_width: 2
     float_precision: 1
     group_by:
@@ -221,61 +228,57 @@ series:
     show:
       legend_value: false
       in_header: false
-  - entity: sensor.hlf_diag_soc_pct_raw
-    show:
-      in_header: true
-      in_chart: false
-    name: Batterie
-    float_precision: 1
-    color: "#4dabf7"
+
   - entity: sensor.hlf_battery_runtime
     name: Prognose-SOC
-    unit: kWh
-    yaxis_id: power
+    unit: "%"
+    yaxis_id: battery
     color: "#ffa94d"
     stroke_width: 2
-    stroke_dash: 3
-    float_precision: 2
+    stroke_dash: 5
+    float_precision: 1
     type: area
-    opacity: 0.3
+    opacity: 0.15
     data_generator: |
       const forecast = entity.attributes.soc_hourly_forecast || [];
-      const dayStart = new Date();
-      dayStart.setHours(0, 0, 0, 0);
       return forecast
-        .map(entry => [
-          new Date(entry.period_start).getTime(),
-          entry.soc_kwh
-        ])
-        .filter(point => point[0] >= dayStart.getTime());
+        .filter(e => e.is_forecast === true)
+        .map(e => [
+          new Date(e.period_start).getTime(),
+          e.soc_pct
+        ]);
     show:
       legend_value: false
       in_header: false
       in_chart: true
     extend_to: false
+
+  - entity: sensor.hlf_diag_soc_pct_raw
+    name: Batterie
+    float_precision: 1
+    color: "#4dabf7"
+    show:
+      in_header: true
+      in_chart: false
+
   - entity: sensor.hlf_diag_bat_kwh
     name: Ist-SOC
     unit: kWh
     color: "#00e676"
+    float_precision: 1
     show:
       in_header: true
       in_chart: false
-    float_precision: 1
+
   - entity: sensor.hlf_battery_runtime
     name: Restlaufzeit
     unit: min
-    yaxis_id: power
     color: "#ffa94d"
-    stroke_width: 2
-    stroke_dash: 3
-    float_precision: 1
-    type: area
-    opacity: 0.3
+    float_precision: 0
     show:
-      legend_value: false
       in_header: true
       in_chart: false
-    extend_to: false
+
 apex_config:
   chart:
     height: 350px
@@ -287,9 +290,11 @@ apex_config:
       left: 0
       right: 0
   xaxis:
+    type: datetime
     title:
       text: Uhrzeit
-    type: datetime
+    min: EVAL:new Date().setHours(0,0,0,0)
+    max: EVAL:Date.now() + 24 * 60 * 60 * 1000
     labels:
       datetimeFormatter:
         hour: HH:mm
@@ -301,25 +306,16 @@ apex_config:
     type: gradient
     gradient:
       shadeIntensity: 1
-      opacityFrom: 0.5
-      opacityTo: 0.1
+      opacityFrom: 0.4
+      opacityTo: 0.05
       stops:
         - 0
         - 100
 yaxis:
-  - id: power
-    min: 0
-    max: 7.78
-    decimals: 0
-    apex_config:
-      title:
-        text: Restkapazität (kWh)
-      tickAmount: 8
   - id: battery
     min: 0
     max: 100
     decimals: 0
-    opposite: true
     apex_config:
       tickAmount: 8
       title:
@@ -327,7 +323,7 @@ yaxis:
       labels:
         formatter: |
           EVAL:function(value) {
-            return value.toFixed(0);
+            return value.toFixed(0) + '%';
           }
 grid_options:
   columns: full
@@ -339,7 +335,7 @@ card_mod:
     }
 ```
 
-> **Hinweis:** `sensor.alphaess_soc_battery`, `sensor.hlf_diag_soc_pct_raw` und `sensor.hlf_diag_bat_kwh` müssen ggf. an deine eigenen Sensor-Namen angepasst werden. Den `max`-Wert der Y-Achse (`7.78`) auf deine Akkukapazität anpassen.
+> **Hinweis:** `sensor.alphaess_soc_battery` durch deinen eigenen SOC-Sensor ersetzen. Der `max`-Wert der Y-Achse ist fest auf 100 % gesetzt – keine Anpassung nötig.
 
 </details>
 
@@ -348,6 +344,12 @@ card_mod:
 ### Hauslast-Prognose (ApexCharts)
 
 Zeigt die stündliche Prognose für heute (blau) und morgen (orange) als Balkendiagramm, zusammen mit dem tatsächlichen Ist-Verbrauch (rot).
+
+**Zeitfenster:** 00:00 Uhr heute bis jetzt + 24 Stunden.
+
+- **Heute (blau):** Alle 24 Stunden des heutigen Tages aus `sensor.hlf_forecast_today`
+- **Morgen (orange):** Stunden des morgigen Tages bis jetzt + 24 h aus `sensor.hlf_forecast_tomorrow`
+- **Ist-Verbrauch (rot):** Tatsächlicher stündlicher Verbrauch aus `sensor.hauslast_stundlich`
 
 ![Hauslast-Prognose Dashboard](docs/images/screenshot_hauslast_prognose.png)
 
@@ -372,6 +374,7 @@ all_series_config:
 apex_config:
   chart:
     height: 350px
+    width: 100%
     stacked: true
   plotOptions:
     bar:
@@ -385,12 +388,19 @@ apex_config:
   xaxis:
     title:
       text: Uhrzeit
+    min: EVAL:new Date().setHours(0,0,0,0)
+    max: EVAL:Date.now() + 24 * 60 * 60 * 1000
     labels:
       show: true
       tickPlacement: between
+      datetimeFormatter:
+        hour: HH:mm
+        day: dd.MM
   yaxis:
     title:
       text: kWh
+    labels:
+      show: true
     min: 0
     max: 3
     stepSize: 0.5
@@ -409,9 +419,9 @@ series:
     show:
       in_header: false
       legend_value: false
-    data_generator: >
+    data_generator: |
       const forecast = entity.attributes.forecast || [];
-      return forecast.slice(1).map(item => [
+      return forecast.map(item => [
         new Date(item.period_start).getTime(),
         item.load_estimate
       ]);
@@ -420,6 +430,7 @@ series:
     float_precision: 1
     color: "#4dabf7"
     unit: kWh
+    transform: return parseFloat(entity.state);
     show:
       in_chart: false
       in_header: true
@@ -428,15 +439,16 @@ series:
     type: column
     color: "#ffa94d"
     unit: kWh
+    transform: return parseFloat(entity.state);
     show:
       in_header: false
       legend_value: false
-    data_generator: >
+    data_generator: |
       const forecast = entity.attributes.forecast || [];
-      return forecast.map(item => [
-        new Date(item.period_start).getTime(),
-        item.load_estimate
-      ]);
+      const cutoff = Date.now() + 24 * 60 * 60 * 1000;
+      return forecast
+        .map(item => [new Date(item.period_start).getTime(), item.load_estimate])
+        .filter(point => point[0] <= cutoff);
   - entity: sensor.hlf_forecast_tomorrow
     name: Prognose Morgen
     color: "#ffa94d"
@@ -476,7 +488,7 @@ card_mod:
     }
 ```
 
-> **Hinweis:** `sensor.hauslast_taglich` und `sensor.hauslast_stundlich` müssen ggf. an deine eigenen Sensor-Namen angepasst werden. Den `max`-Wert der Y-Achse (`3`) ggf. an deinen typischen Verbrauch anpassen.
+> **Hinweis:** `sensor.hauslast_taglich` und `sensor.hauslast_stundlich` durch deine eigenen Sensor-Namen ersetzen. Den `max`-Wert der Y-Achse (`3`) ggf. an deinen typischen Verbrauch anpassen.
 
 </details>
 
@@ -509,6 +521,16 @@ Das ist beabsichtigt – der letzte Wert wird per `RestoreEntity` wiederhergeste
 ## Changelog
 
 Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md](CHANGELOG.md).
+
+### v1.1.1
+- Restlaufzeit-Sprünge behoben (Debounce: nur `is_forecast: true`-Slots für Berechnung)
+- SOC-Forecast startet jetzt immer ab 00:00 Uhr; vergangene Slots werden eingefroren und nicht neu berechnet
+- `soc_pct` (0–100 %) in jedem `soc_hourly_forecast`-Eintrag ergänzt
+- Neuer Diagnosesensor `battery_empty_at`: Zeitpunkt Akku leer, oder `false` wenn Akku reicht
+- Hauslast-Forecast: fehlender 00:00-Wert behoben
+- **Neuer optionaler Sensor „PV-Prognose Übermorgen":** Ermöglicht echte 48h-Prognose ab jetzt (statt nur bis 23:00 Uhr des Folgetages)
+- SOC-Simulation intern auf 72 Slots (3 Tage) erweitert, Ausgabe auf 48h ab jetzt begrenzt
+- Dashboard-YAMLs aktualisiert: Zeitfenster 00:00 bis jetzt+48h, einheitliche %-Achse
 
 ### v1.1.0
 - Sensor-Namen und Entity-IDs auf Englisch umgestellt
