@@ -524,10 +524,11 @@ The full changelog with all versions can be found in [CHANGELOG.md](CHANGELOG.md
 
 ### v1.1.1
 - Fixed battery runtime jumps (debounce: only `is_forecast: true` slots used for calculation)
-- SOC forecast now always starts at 00:00; past slots are frozen and no longer recalculated
+- SOC forecast now always starts at 00:00; past SOC slots are frozen and no longer recalculated
 - Added `soc_pct` (0–100 %) to every `soc_hourly_forecast` entry
 - New diagnostic sensor `battery_empty_at`: timestamp when battery runs empty, or `false` if it lasts
 - House load forecast: fixed missing 00:00 entry
+- **Past house load forecast values are now frozen:** Changing parameters (e.g. history weeks) no longer recalculates already past hours retroactively
 - **New optional sensor "PV Forecast Day After Tomorrow":** Enables a true 48h forecast from now (instead of ending at 23:00 of the following day)
 - SOC simulation extended internally to 72 slots (3 days); output capped at 48h from now
 - Dashboard YAMLs updated: time window 00:00 to now+48h, unified %-axis

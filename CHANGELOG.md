@@ -37,6 +37,12 @@
 - Der Sensor ist optional – ohne ihn verhält sich die Integration wie bisher.
 - Konfiguration unter: Einstellungen → Geräte & Dienste → Hauslast Prognose → Konfigurieren → Sensoren anpassen
 
+**Vergangene Hauslast-Prognosewerte werden eingefroren**
+- Bisher wurden bei jeder Neuberechnung (z. B. nach einer Parameteränderung wie dem Historienzeitraum) auch bereits vergangene Stunden des Hauslast-Forecasts neu berechnet.
+- Ab sofort werden vergangene Stunden beim ersten Aufruf eingefroren (`_frozen_hl_past_slots`) und bei Folgeberechnungen unverändert wiederverwendet.
+- Der Cache wird täglich um Mitternacht geleert, damit der neue Tag immer frisch startet.
+- Nach einem HA-Neustart werden die Werte beim ersten Durchlauf neu gesetzt – das ist gewollt.
+
 **Dashboard-Diagramme: Zeitfenster angepasst**
 - Akku-Prognose-Diagramm: Zeigt 00:00 bis jetzt + 48 h.
 - Hauslast-Prognose-Diagramm: Zeigt 00:00 bis jetzt + 48 h (inkl. 00:00-Wert).
@@ -110,6 +116,12 @@
 - The new optional sensor `pv_forecast_day_after_tomorrow_sensor` (Solcast sensor for the day after tomorrow) extends the simulation to **72 slots (3 days)** and then trims it to **48 hours from now**.
 - The sensor is optional — without it the integration behaves as before.
 - Configure under: Settings → Devices & Services → House Load Forecast → Configure → Update sensors
+
+**Past house load forecast values are now frozen**
+- Previously, every recalculation (e.g. after changing a parameter such as the history weeks) also recalculated already past hours of the house load forecast.
+- From now on, past hours are frozen on first calculation (`_frozen_hl_past_slots`) and reused unchanged in subsequent calculations.
+- The cache is cleared daily at midnight so each new day always starts fresh.
+- After an HA restart, values are recalculated on the first run — this is intentional.
 
 **Dashboard charts: Time window adjusted**
 - Battery forecast chart: Shows 00:00 to now + 48 h.

@@ -207,9 +207,13 @@ class HauslastCoordinator:
 
         self._has_valid_data: bool = False
 
-        # Einmalig gespeicherte Vergangenheits-Slots (werden nicht überschrieben)
+        # Einmalig gespeicherte Vergangenheits-Slots SOC (werden nicht überschrieben)
         self._frozen_past_slots: list[dict] = []
         self._frozen_past_date: str = ""
+
+        # Einmalig gespeicherte vergangene Hauslast-Slots (bei Parameteränderung nicht überschreiben)
+        self._frozen_hl_past_slots: dict[str, float] = {}  # period_start → load_estimate
+        self._frozen_hl_past_date: str = ""
 
     def async_register_entities(self, entities):
         self._entities = entities
@@ -257,6 +261,11 @@ class HauslastCoordinator:
         if self._frozen_past_date != today_str:
             self._frozen_past_slots = []
             self._frozen_past_date = today_str
+
+        # Hauslast-Vergangenheits-Cache täglich leeren
+        if self._frozen_hl_past_date != today_str:
+            self._frozen_hl_past_slots = {}
+            self._frozen_hl_past_date = today_str
 
 
         raw_weeks = self.cfg.get(CONF_HISTORY_WEEKS, DEFAULT_HISTORY_WEEKS)
@@ -457,13 +466,31 @@ class HauslastCoordinator:
         today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
 
         def build_forecast(profile: list[float], base_date) -> list[dict]:
+            """Hauslast-Forecast aufbauen.
+            Vergangene Stunden werden eingefroren – Parameteränderungen ändern sie nicht mehr.
+            Aktuelle und zukünftige Stunden werden immer frisch berechnet.
+            """
             result = []
+            now_floor_h = now_local.replace(minute=0, second=0, microsecond=0)
             for h in range(24):
                 dt_slot = base_date.replace(hour=h, minute=0, second=0, microsecond=0)
-                result.append({
-                    "period_start": dt_slot.isoformat(),
-                    "load_estimate": round(profile[h] / 1000.0, 3) if h < len(profile) else 0.0,
-                })
+                ts_key = dt_slot.isoformat()
+                load_w = profile[h] / 1000.0 if h < len(profile) else 0.0
+
+                if dt_slot < now_floor_h:
+                    # Vergangene Stunde: einmalig einfrieren, danach immer aus Cache
+                    if ts_key not in self._frozen_hl_past_slots:
+                        self._frozen_hl_past_slots[ts_key] = round(load_w, 3)
+                    result.append({
+                        "period_start": ts_key,
+                        "load_estimate": self._frozen_hl_past_slots[ts_key],
+                    })
+                else:
+                    # Aktuelle und zukünftige Stunden: immer neu berechnen
+                    result.append({
+                        "period_start": ts_key,
+                        "load_estimate": round(load_w, 3),
+                    })
             return result
 
         day_after_wd = (today_wd + 2) % 7
@@ -472,7 +499,7 @@ class HauslastCoordinator:
         profile_morgen      = self.profiles[tomorrow_wd]   if self.profiles[tomorrow_wd]   else self.fallback_wt
         profile_uebermorgen = self.profiles[day_after_wd]  if self.profiles[day_after_wd]  else self.fallback_wt
 
-        # FIX: forecast_heute startet bei 00:00 (nicht bei now_floor)
+        # forecast_heute startet bei 00:00; vergangene Stunden werden eingefroren
         self.forecast_heute = build_forecast(profile_heute, today_start)
         self.forecast_morgen = build_forecast(
             profile_morgen,

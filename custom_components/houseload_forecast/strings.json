@@ -108,6 +108,12 @@
         "menu_options": {
           "sensors": "Sensoren anpassen / Edit Sensors",
           "fallback_wt": "Fallback-Profile bearbeiten / Edit Fallback Profiles"
+        },
+        "data": {
+          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen (Solcast, Attribut detailedHourly)"
+        },
+        "data_description": {
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt"
         }
       },
       "sensors": {

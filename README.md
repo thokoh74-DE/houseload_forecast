@@ -524,10 +524,11 @@ Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md
 
 ### v1.1.1
 - Restlaufzeit-Sprünge behoben (Debounce: nur `is_forecast: true`-Slots für Berechnung)
-- SOC-Forecast startet jetzt immer ab 00:00 Uhr; vergangene Slots werden eingefroren und nicht neu berechnet
+- SOC-Forecast startet jetzt immer ab 00:00 Uhr; vergangene SOC-Slots werden eingefroren und nicht neu berechnet
 - `soc_pct` (0–100 %) in jedem `soc_hourly_forecast`-Eintrag ergänzt
 - Neuer Diagnosesensor `battery_empty_at`: Zeitpunkt Akku leer, oder `false` wenn Akku reicht
 - Hauslast-Forecast: fehlender 00:00-Wert behoben
+- **Vergangene Hauslast-Prognosewerte werden eingefroren:** Parameteränderungen (z. B. Historienzeitraum) ändern bereits vergangene Stunden nicht mehr rückwirkend
 - **Neuer optionaler Sensor „PV-Prognose Übermorgen":** Ermöglicht echte 48h-Prognose ab jetzt (statt nur bis 23:00 Uhr des Folgetages)
 - SOC-Simulation intern auf 72 Slots (3 Tage) erweitert, Ausgabe auf 48h ab jetzt begrenzt
 - Dashboard-YAMLs aktualisiert: Zeitfenster 00:00 bis jetzt+48h, einheitliche %-Achse
