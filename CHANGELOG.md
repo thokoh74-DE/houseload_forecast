@@ -43,6 +43,21 @@
 - Der Cache wird täglich um Mitternacht geleert, damit der neue Tag immer frisch startet.
 - Nach einem HA-Neustart werden die Werte beim ersten Durchlauf neu gesetzt – das ist gewollt.
 
+**Neuer Sensor: Hauslast-Prognose Übermorgen**
+- `sensor.hlf_forecast_day_after_tomorrow` analog zu `sensor.hlf_forecast_today` und `sensor.hlf_forecast_tomorrow`.
+- Enthält die stündliche Hauslast-Prognose für übermorgen als `forecast`-Attribut (24 Einträge).
+- Ermöglicht die direkte Nutzung der Übermorgen-Prognose im Dashboard.
+
+**SOC-Simulation: Entladeschluss als untere Grenze**
+- Bisher konnte `soc_kwh` in der Prognose auf 0 kWh fallen, auch wenn ein Entladeschluss (`discharging_cutoff_soc`) konfiguriert ist.
+- Ab sofort wird `soc_kwh` nie unter `cutoff_kwh` (= `bat_capacity × cutoff_pct / 100`) gerechnet.
+- Damit stimmt die Prognose mit dem realen Verhalten des Wechselrichters überein.
+
+**Translation-Fix: Klartextbezeichnung für PV-Prognose Übermorgen**
+- In den Einstellungen unter „Sensoren anpassen" wurde statt des Klartextnamens der technische Key `pv_forecast_day_after_tomorrow_sensor` angezeigt.
+- Ursache: Der Übersetzungskey fehlte im Step `options.sensors` (der Options-Flow nutzt einen eigenen Step, nicht `options.init`).
+- Jetzt korrekt in allen Steps: `config.user`, `options.sensors` und `options.init`.
+
 **Dashboard-Diagramme: Zeitfenster angepasst**
 - Akku-Prognose-Diagramm: Zeigt 00:00 bis jetzt + 48 h.
 - Hauslast-Prognose-Diagramm: Zeigt 00:00 bis jetzt + 48 h (inkl. 00:00-Wert).
@@ -122,6 +137,21 @@
 - From now on, past hours are frozen on first calculation (`_frozen_hl_past_slots`) and reused unchanged in subsequent calculations.
 - The cache is cleared daily at midnight so each new day always starts fresh.
 - After an HA restart, values are recalculated on the first run — this is intentional.
+
+**New sensor: House Load Forecast Day After Tomorrow**
+- `sensor.hlf_forecast_day_after_tomorrow` analogous to `sensor.hlf_forecast_today` and `sensor.hlf_forecast_tomorrow`.
+- Contains the hourly house load forecast for the day after tomorrow as a `forecast` attribute (24 entries).
+- Enables direct use of the day-after-tomorrow forecast on the dashboard.
+
+**SOC simulation: Discharge cutoff as lower limit**
+- Previously `soc_kwh` in the forecast could drop to 0 kWh even when a discharge cutoff (`discharging_cutoff_soc`) is configured.
+- From now on `soc_kwh` never falls below `cutoff_kwh` (= `bat_capacity × cutoff_pct / 100`).
+- The forecast now matches the real behaviour of the inverter.
+
+**Translation fix: Plain-text label for PV Forecast Day After Tomorrow**
+- In the settings under "Update sensors", the technical key `pv_forecast_day_after_tomorrow_sensor` was shown instead of the plain-text label.
+- Root cause: The translation key was missing in the `options.sensors` step (the options flow uses its own step, not `options.init`).
+- Now correctly present in all steps: `config.user`, `options.sensors` and `options.init`.
 
 **Dashboard charts: Time window adjusted**
 - Battery forecast chart: Shows 00:00 to now + 48 h.

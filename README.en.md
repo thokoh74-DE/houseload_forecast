@@ -94,6 +94,7 @@ Via **Settings → Devices & Services → Hauslast Prognose → Configure**:
 |---|---|---|
 | `sensor.hlf_forecast_today` | kWh | Daily house load forecast for today (House Load Forecast Today) |
 | `sensor.hlf_forecast_tomorrow` | kWh | Daily house load forecast for tomorrow (House Load Forecast Tomorrow) |
+| `sensor.hlf_forecast_day_after_tomorrow` | kWh | Daily house load forecast for the day after tomorrow (House Load Forecast Day After Tomorrow) |
 | `sensor.hlf_battery_runtime` | min | Remaining time until discharge cutoff (PV Battery Runtime Forecast). The forecast covers **48 hours from now** (today + tomorrow + day after tomorrow). A value of **2880 min means the battery will not run empty within the next 48 hours** based on the current forecast. |
 
 ### Key Attributes

@@ -94,6 +94,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 |---|---|---|
 | `sensor.hlf_forecast_today` | kWh | Tagesprognose Hauslast für heute (House Load Forecast Today) |
 | `sensor.hlf_forecast_tomorrow` | kWh | Tagesprognose Hauslast für morgen (House Load Forecast Tomorrow) |
+| `sensor.hlf_forecast_day_after_tomorrow` | kWh | Tagesprognose Hauslast für übermorgen (House Load Forecast Day After Tomorrow) |
 | `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **48 Stunden ab jetzt** (heute + morgen + übermorgen). Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
 
 ### Wichtige Attribute
@@ -531,6 +532,9 @@ Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md
 - **Vergangene Hauslast-Prognosewerte werden eingefroren:** Parameteränderungen (z. B. Historienzeitraum) ändern bereits vergangene Stunden nicht mehr rückwirkend
 - **Neuer optionaler Sensor „PV-Prognose Übermorgen":** Ermöglicht echte 48h-Prognose ab jetzt (statt nur bis 23:00 Uhr des Folgetages)
 - SOC-Simulation intern auf 72 Slots (3 Tage) erweitert, Ausgabe auf 48h ab jetzt begrenzt
+- **Neuer Sensor `sensor.hlf_forecast_day_after_tomorrow`:** Hauslast-Prognose Übermorgen analog zu heute/morgen
+- **SOC-Simulation: Entladeschluss als untere Grenze:** `soc_kwh` und `soc_pct` können nicht mehr unter den Cutoff-Wert fallen
+- Translation-Fix: Klartextbezeichnung für „PV-Prognose Übermorgen" in allen Einstellungsschritten ergänzt
 - Dashboard-YAMLs aktualisiert: Zeitfenster 00:00 bis jetzt+48h, einheitliche %-Achse
 
 ### v1.1.0

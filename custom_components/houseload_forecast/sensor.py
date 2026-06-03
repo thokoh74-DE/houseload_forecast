@@ -49,6 +49,7 @@ MAX_RUNTIME_MIN = 2880
 _SENSOR_NAMES_DE = {
     "forecast_today":             "Hauslast-Prognose Heute",
     "forecast_tomorrow":          "Hauslast-Prognose Morgen",
+    "forecast_day_after_tomorrow": "Hauslast-Prognose Übermorgen",
     "battery_runtime":            "PV Akku Restlaufzeit",
     "fallback_weekday":           "Hauslast Fallback Wochentag",
     "fallback_weekend":           "Hauslast Fallback Wochenende",
@@ -65,6 +66,7 @@ _SENSOR_NAMES_DE = {
 _SENSOR_NAMES_EN = {
     "forecast_today":             "House Load Forecast Today",
     "forecast_tomorrow":          "House Load Forecast Tomorrow",
+    "forecast_day_after_tomorrow": "House Load Forecast Day After Tomorrow",
     "battery_runtime":            "PV Battery Runtime",
     "fallback_weekday":           "House Load Fallback Weekday",
     "fallback_weekend":           "House Load Fallback Weekend",
@@ -112,6 +114,7 @@ async def async_setup_entry(
         HauslastFallbackSensor(coordinator, "wochenende", entry),
         HauslastPrognoseHeuteSensor(coordinator, entry),
         HauslastPrognoseMorgenSensor(coordinator, entry),
+        HauslastPrognoseUebermorgenSensor(coordinator, entry),
         AkkuRestlaufzeitSensor(coordinator, entry),
         DiagnosticSensor(coordinator, entry, "calculation_timestamp",
                          "Last Forecast Update", None, None, "mdi:clock-outline"),
@@ -533,7 +536,11 @@ class HauslastCoordinator:
         # SOC-Forecast:
         #   - 00:00 bis aktuelle volle Stunde: bat_kwh (Ist-Wert) als Platzhalter
         #     → wird im Dashboard durch tatsächlichen SOC-Verlauf überlagert
-        #   - Aktuelle volle Stunde bis +24 h (bzw. bis 23:00 morgen): Prognose
+        #   - Aktuelle volle Stunde bis +48 h: Prognose
+        #   - SOC kann nicht unter cutoff_kwh fallen (Entladeschluss)
+
+        # cutoff_kwh vorab berechnen – wird im SOC-Loop als untere Grenze benötigt
+        cutoff_kwh_sim = self.cutoff_pct_raw / 100.0 * self.bat_max_kwh
 
         now_ts       = now_local.timestamp()
         now_floor    = now_local.replace(minute=0, second=0, microsecond=0)
@@ -608,12 +615,12 @@ class HauslastCoordinator:
                 }
                 out.append(entry)
                 soc = self.bat_kwh + (pv_i - hl_i) * remaining_fraction
-                soc = max(0.0, min(soc, self.bat_max_kwh))
+                soc = max(cutoff_kwh_sim, min(soc, self.bat_max_kwh))
 
             else:
-                # Zukunft: Prognose
+                # Zukunft: Prognose – SOC kann nicht unter Entladeschluss fallen
                 soc = soc + (pv_i - hl_i)
-                soc = max(0.0, min(soc, self.bat_max_kwh))
+                soc = max(cutoff_kwh_sim, min(soc, self.bat_max_kwh))
                 soc_pct = round(soc / self.bat_max_kwh * 100.0, 1) if self.bat_max_kwh > 0 else 0.0
                 out.append({
                     "period_start": raw_ts,
@@ -632,7 +639,7 @@ class HauslastCoordinator:
         self.soc_slots_processed = len(out_48h)
 
         # ── Restlaufzeit berechnen ─────────────────────────────────────
-        cutoff_kwh = self.cutoff_pct_raw / 100.0 * self.bat_max_kwh
+        cutoff_kwh = cutoff_kwh_sim  # bereits oben berechnet
         self.cutoff_kwh = cutoff_kwh
 
         # Debounce: Nur Zukunfts-Slots (is_forecast=True) für Restlaufzeit prüfen
@@ -829,6 +836,54 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
     def should_poll(self):
         return False
 
+
+
+class HauslastPrognoseUebermorgenSensor(_HauslastBaseSensor):
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{DOMAIN}_forecast_day_after_tomorrow_{entry.entry_id}"
+        self._attr_translation_key = "forecast_day_after_tomorrow"
+        self._translation_key_for_name = "forecast_day_after_tomorrow"
+        self.entity_id = "sensor.hlf_forecast_day_after_tomorrow"
+        self._attr_native_unit_of_measurement = "kWh"
+        self._attr_device_class = SensorDeviceClass.ENERGY
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_icon = "mdi:home-lightning-bolt-outline"
+
+    @property
+    def native_value(self):
+        return round(sum(e["load_estimate"] for e in self._coordinator.forecast_uebermorgen), 3)
+
+    @property
+    def extra_state_attributes(self):
+        c = self._coordinator
+        d  = c.data_days
+        hw = c.history_weeks_used
+        if d < MIN_DATA_DAYS:
+            basis = "Fallback (manuell)"
+        elif hw == 0:
+            basis = f"Historisch (gesamte Datenbasis, {d} Tage)"
+        else:
+            basis = f"Historisch (letzte {hw} Wochen)"
+
+        day_after_wd = (dt_util.now().weekday() + 2) % 7
+        day_after_name = WEEKDAY_NAMES[day_after_wd].capitalize()
+        total = sum(e["load_estimate"] for e in c.forecast_uebermorgen)
+        return {
+            "data_days": d,
+            "history_weeks": hw if hw > 0 else "unbegrenzt",
+            "daten_basis": basis,
+            "wochentag": day_after_name,
+            "profil_quelle_uebermorgen": c.profile_sources[day_after_wd],
+            "forecast_kwh_uebermorgen": round(total, 3),
+            "forecast": c.forecast_uebermorgen,
+            "bat_kwh": round(c.bat_kwh, 3),
+            "bat_max_kwh": round(c.bat_max_kwh, 3),
+        }
+
+    @property
+    def should_poll(self):
+        return False
 
 class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
     def __init__(self, coordinator, entry):
