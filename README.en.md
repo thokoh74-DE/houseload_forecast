@@ -176,22 +176,22 @@ The **IQR outlier filter** removes values outside `[Q1 − 3×IQR, Q3 + 3×IQR]`
 
 ### Battery Forecast (ApexCharts)
 
-Shows the real battery state of charge from the historian (blue) and the SOC forecast from the current hour onwards (dashed orange) — both in percent on a shared Y-axis.
+Shows the real battery state of charge from the historian (blue, up to "Now") and the SOC forecast for the next 48 hours (dashed orange) — both in percent on a shared Y-axis.
 
-**Time window:** 00:00 today until now + 24 hours.
+**Time window:** 00:00 today until now + 48 hours.
 
-- **Battery (actual):** Historical SOC from `sensor.alphaess_soc_battery` (drawn up to "Now" automatically)
-- **Forecast SOC:** Projected SOC from the current hour, using only `soc_hourly_forecast` entries with `is_forecast: true`
+- **Battery (actual):** Historical SOC from `sensor.alphaess_soc_battery`
+- **Forecast SOC:** Projected SOC from `soc_hourly_forecast` (`is_forecast: true` entries only)
 - **Header:** Current SoC in %, actual SOC in kWh, remaining battery runtime in minutes
 
-![Battery Forecast Dashboard](docs/images/screenshot_akku_prognose.png)
+![Battery Forecast Dashboard](docs/images/screenshot_battery_forecast.png)
 
 <details>
 <summary>Show YAML</summary>
 
 ```yaml
 type: custom:apexcharts-card
-graph_span: 48h
+graph_span: 60h
 header:
   show: true
   show_states: true
@@ -212,7 +212,7 @@ all_series_config:
     legend_value: false
 series:
   - entity: sensor.alphaess_soc_battery
-    name: Battery (actual)
+    name: Battery
     transform: return x;
     yaxis_id: battery
     type: area
@@ -220,7 +220,7 @@ series:
     extend_to: now
     curve: smooth
     fill_raw: last
-    opacity: 0.5
+    opacity: 0.6
     stroke_width: 2
     float_precision: 1
     group_by:
@@ -229,60 +229,65 @@ series:
     show:
       legend_value: false
       in_header: false
-
+  - entity: sensor.hlf_diag_soc_pct_raw
+    show:
+      in_header: true
+      in_chart: false
+    name: Battery
+    float_precision: 1
+    color: "#4dabf7"
   - entity: sensor.hlf_battery_runtime
     name: Forecast SOC
     unit: "%"
     yaxis_id: battery
     color: "#ffa94d"
     stroke_width: 2
-    stroke_dash: 5
-    float_precision: 1
+    stroke_dash: 3
+    float_precision: 2
     type: area
-    opacity: 0.15
+    opacity: 0.3
     data_generator: |
       const forecast = entity.attributes.soc_hourly_forecast || [];
+      const dayStart = new Date();
+      dayStart.setHours(0, 0, 0, 0);
       return forecast
-        .filter(e => e.is_forecast === true)
-        .map(e => [
-          new Date(e.period_start).getTime(),
-          e.soc_pct
-        ]);
+        .map(entry => [
+          new Date(entry.period_start).getTime(),
+          entry.soc_pct
+        ])
+        .filter(point => point[0] >= dayStart.getTime());
     show:
       legend_value: false
       in_header: false
       in_chart: true
     extend_to: false
-
-  - entity: sensor.hlf_diag_soc_pct_raw
-    name: Battery
-    float_precision: 1
-    color: "#4dabf7"
-    show:
-      in_header: true
-      in_chart: false
-
   - entity: sensor.hlf_diag_bat_kwh
     name: Actual SOC
-    unit: kWh
+    unit: kwh
     color: "#00e676"
-    float_precision: 1
     show:
       in_header: true
       in_chart: false
-
+    float_precision: 1
   - entity: sensor.hlf_battery_runtime
     name: Runtime
     unit: min
+    yaxis_id: power
     color: "#ffa94d"
-    float_precision: 0
+    stroke_width: 2
+    stroke_dash: 3
+    float_precision: 1
+    type: area
+    opacity: 0.3
     show:
+      legend_value: false
       in_header: true
       in_chart: false
-
+    extend_to: false
 apex_config:
   chart:
     height: 350px
+    width: 100%
     stacked: false
   dataLabels:
     enabled: false
@@ -291,15 +296,24 @@ apex_config:
       left: 0
       right: 0
   xaxis:
-    type: datetime
     title:
       text: Time
-    min: EVAL:new Date().setHours(0,0,0,0)
-    max: EVAL:Date.now() + 24 * 60 * 60 * 1000
+    type: datetime
+    tickAmount: 20
     labels:
-      datetimeFormatter:
-        hour: HH:mm
-        day: dd.MM
+      datetimeUTC: false
+      rotate: -45
+      rotateAlways: true
+      formatter: |
+        EVAL:function(value, timestamp) {
+          const d = new Date(timestamp);
+          const pad = n => String(n).padStart(2, '0');
+          const time = pad(d.getHours()) + ':' + pad(d.getMinutes());
+          if (d.getHours() === 0 && d.getMinutes() === 0) {
+            return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '\n' + time;
+          }
+          return time;
+        }
   tooltip:
     x:
       format: dd.MM.yy HH:mm
@@ -307,8 +321,8 @@ apex_config:
     type: gradient
     gradient:
       shadeIntensity: 1
-      opacityFrom: 0.4
-      opacityTo: 0.05
+      opacityFrom: 0.5
+      opacityTo: 0.1
       stops:
         - 0
         - 100
@@ -317,6 +331,7 @@ yaxis:
     min: 0
     max: 100
     decimals: 0
+    opposite: false
     apex_config:
       tickAmount: 8
       title:
@@ -324,7 +339,7 @@ yaxis:
       labels:
         formatter: |
           EVAL:function(value) {
-            return value.toFixed(0) + '%';
+            return value.toFixed(0);
           }
 grid_options:
   columns: full
@@ -336,7 +351,7 @@ card_mod:
     }
 ```
 
-> **Note:** Replace `sensor.alphaess_soc_battery` with your own SOC sensor. The Y-axis max is fixed at 100 % — no adjustment needed.
+> **Note:** Replace `sensor.alphaess_soc_battery` with your own SOC sensor.
 
 </details>
 
@@ -344,22 +359,23 @@ card_mod:
 
 ### House Load Forecast (ApexCharts)
 
-Shows the hourly forecast for today (blue) and tomorrow (orange) as a bar chart, together with the actual consumption (red).
+Shows the hourly forecast for today (blue), tomorrow (orange) and the day after tomorrow (salmon) as a bar chart, together with actual consumption (red).
 
-**Time window:** 00:00 today until now + 24 hours.
+**Time window:** 00:00 today until now + 48 hours (60h from start of day).
 
 - **Today (blue):** All 24 hours of today from `sensor.hlf_forecast_today`
-- **Tomorrow (orange):** Hours of tomorrow up to now + 24 h from `sensor.hlf_forecast_tomorrow`
+- **Tomorrow (orange):** All 24 hours of tomorrow from `sensor.hlf_forecast_tomorrow`
+- **Day after tomorrow (salmon):** Hours from `sensor.hlf_forecast_day_after_tomorrow`
 - **Actual consumption (red):** Real hourly consumption from `sensor.hauslast_stundlich`
 
-![House Load Forecast Dashboard](docs/images/screenshot_hauslast_prognose.png)
+![House Load Forecast Dashboard](docs/images/screenshot_houseload_forecast.png)
 
 <details>
 <summary>Show YAML</summary>
 
 ```yaml
 type: custom:apexcharts-card
-graph_span: 48h
+graph_span: 60h
 header:
   show: true
   show_states: true
@@ -389,14 +405,22 @@ apex_config:
   xaxis:
     title:
       text: Time
-    min: EVAL:new Date().setHours(0,0,0,0)
-    max: EVAL:Date.now() + 24 * 60 * 60 * 1000
+    type: datetime
+    tickAmount: 20
     labels:
-      show: true
-      tickPlacement: between
-      datetimeFormatter:
-        hour: HH:mm
-        day: dd.MM
+      datetimeUTC: false
+      rotate: -45
+      rotateAlways: true
+      formatter: |
+        EVAL:function(value, timestamp) {
+          const d = new Date(timestamp);
+          const pad = n => String(n).padStart(2, '0');
+          const time = pad(d.getHours()) + ':' + pad(d.getMinutes());
+          if (d.getHours() === 0 && d.getMinutes() === 0) {
+            return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '\n' + time;
+          }
+          return time;
+        }
   yaxis:
     title:
       text: kWh
@@ -444,15 +468,34 @@ series:
     show:
       in_header: false
       legend_value: false
-    data_generator: |
-      const forecast = entity.attributes.forecast || [];
-      const cutoff = Date.now() + 24 * 60 * 60 * 1000;
-      return forecast
-        .map(item => [new Date(item.period_start).getTime(), item.load_estimate])
-        .filter(point => point[0] <= cutoff);
+    data_generator: >
+      const forecast = entity.attributes.forecast || [];  return
+      forecast.map(item => [new Date(item.period_start).getTime(),
+      item.load_estimate]);
+  - entity: sensor.hlf_forecast_day_after_tomorrow
+    name: Day After Tomorrow
+    type: column
+    color: "#ffa98d"
+    unit: kWh
+    transform: return parseFloat(entity.state);
+    show:
+      in_header: false
+      legend_value: false
+    data_generator: >
+      const forecast = entity.attributes.forecast || [];  return
+      forecast.map(item => [new Date(item.period_start).getTime(),
+      item.load_estimate]);
   - entity: sensor.hlf_forecast_tomorrow
     name: Forecast Tomorrow
     color: "#ffa94d"
+    unit: kWh
+    float_precision: 1
+    show:
+      in_chart: false
+      in_header: true
+  - entity: sensor.hlf_forecast_day_after_tomorrow
+    name: Forecast Day After Tomorrow
+    color: "#ffa98d"
     unit: kWh
     float_precision: 1
     show:
@@ -489,10 +532,9 @@ card_mod:
     }
 ```
 
-> **Note:** Replace `sensor.hauslast_taglich` and `sensor.hauslast_stundlich` with your own sensor names. Adjust the `max` value of the Y-axis (`3`) to match your typical consumption.
+> **Note:** Replace `sensor.hauslast_taglich` and `sensor.hauslast_stundlich` with your own sensor names. Adjust the `max` Y-axis value (`3`) to match your typical consumption.
 
 </details>
-
 ---
 
 ## Troubleshooting
@@ -516,6 +558,21 @@ Requires Home Assistant ≥ 2026.3. On older versions the integration icon will 
 ### Sensor briefly shows old value after restart
 
 This is intentional — the last value is restored via `RestoreEntity` until the dependent sensors (battery, PV) become available again.
+
+### Past SOC and house load values reset after restart
+
+From v1.1.1 onwards, frozen past values (`is_forecast: false`) are persisted to `/config/.storage/houseload_forecast_soc_cache.json` and `/config/.storage/houseload_forecast_hl_cache.json` and automatically restored on startup. The files are cleared automatically at midnight each day.
+
+### Settings show technical key names instead of plain-text labels
+
+HA aggressively caches translation files. Simply reloading the integration is not enough — the cache must be explicitly cleared.
+
+**Solution:**
+1. Fully restart HA: Settings → System → Restart
+2. Clear the browser cache: `Ctrl + Shift + R` (Windows/Linux) or `Cmd + Shift + R` (Mac)
+3. If the problem persists: hard-reload the page in your browser (`F5` is not enough — use `Ctrl + F5` or clear the cache via developer tools)
+
+This behaviour occurs whenever the translation files of a custom integration have been updated.
 
 ---
 

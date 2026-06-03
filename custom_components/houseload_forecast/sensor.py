@@ -1,7 +1,9 @@
-"""Sensor platform for Hauslast Prognose & Akku Restlaufzeit."""
+"""Sensor platform für Hauslast Prognose & Akku Restlaufzeit."""
 from __future__ import annotations
 
+import json
 import logging
+import os
 from datetime import datetime, timedelta
 
 from homeassistant.components.sensor import (
@@ -44,6 +46,10 @@ DB_PATH = "/config/home-assistant_v2.db"
 
 # Maximale Restlaufzeit in Minuten (48 h) – wird als "Akku reicht durch" interpretiert
 MAX_RUNTIME_MIN = 2880
+
+# Persistente Cache-Dateien unter /config/.storage/
+_CACHE_SOC   = "/config/.storage/houseload_forecast_soc_cache.json"
+_CACHE_HL    = "/config/.storage/houseload_forecast_hl_cache.json"
 
 # ── Übersetzungs-Hilfsfunktion ────────────────────────────────────────────────
 _SENSOR_NAMES_DE = {
@@ -210,16 +216,45 @@ class HauslastCoordinator:
 
         self._has_valid_data: bool = False
 
-        # Einmalig gespeicherte Vergangenheits-Slots SOC (werden nicht überschrieben)
-        self._frozen_past_slots: list[dict] = []
-        self._frozen_past_date: str = ""
+        # Persistente Cache-Dateien: SOC- und Hauslast-Vergangenheitswerte
+        # werden beim Start aus Datei geladen → überleben HA-Neustarts
+        self._frozen_past_slots: list[dict] = self._load_cache(_CACHE_SOC, [])
+        self._frozen_past_date: str = dt_util.now().strftime("%Y-%m-%d")
 
-        # Einmalig gespeicherte vergangene Hauslast-Slots (bei Parameteränderung nicht überschreiben)
-        self._frozen_hl_past_slots: dict[str, float] = {}  # period_start → load_estimate
-        self._frozen_hl_past_date: str = ""
+        self._frozen_hl_past_slots: dict[str, float] = self._load_cache(_CACHE_HL, {})
+        self._frozen_hl_past_date: str = dt_util.now().strftime("%Y-%m-%d")
 
     def async_register_entities(self, entities):
         self._entities = entities
+
+    @staticmethod
+    def _load_cache(path: str, default):
+        """Cache aus JSON-Datei laden. Gibt default zurück wenn Datei fehlt oder defekt."""
+        try:
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                # Nur Einträge vom heutigen Tag behalten
+                today = dt_util.now().strftime("%Y-%m-%d")
+                if isinstance(data, list):
+                    return [e for e in data
+                            if e.get("period_start", "").startswith(today)]
+                if isinstance(data, dict):
+                    return {k: v for k, v in data.items()
+                            if k.startswith(today)}
+        except Exception as exc:
+            _LOGGER.debug("Cache-Datei konnte nicht geladen werden (%s): %s", path, exc)
+        return default
+
+    @staticmethod
+    def _save_cache(path: str, data) -> None:
+        """Cache als JSON-Datei speichern."""
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+        except Exception as exc:
+            _LOGGER.debug("Cache-Datei konnte nicht gespeichert werden (%s): %s", path, exc)
 
     @callback
     def async_update_all(self):
@@ -264,11 +299,13 @@ class HauslastCoordinator:
         if self._frozen_past_date != today_str:
             self._frozen_past_slots = []
             self._frozen_past_date = today_str
+            self._save_cache(_CACHE_SOC, self._frozen_past_slots)
 
         # Hauslast-Vergangenheits-Cache täglich leeren
         if self._frozen_hl_past_date != today_str:
             self._frozen_hl_past_slots = {}
             self._frozen_hl_past_date = today_str
+            self._save_cache(_CACHE_HL, self._frozen_hl_past_slots)
 
 
         raw_weeks = self.cfg.get(CONF_HISTORY_WEEKS, DEFAULT_HISTORY_WEEKS)
@@ -484,6 +521,7 @@ class HauslastCoordinator:
                     # Vergangene Stunde: einmalig einfrieren, danach immer aus Cache
                     if ts_key not in self._frozen_hl_past_slots:
                         self._frozen_hl_past_slots[ts_key] = round(load_w, 3)
+                        self._save_cache(_CACHE_HL, self._frozen_hl_past_slots)
                     result.append({
                         "period_start": ts_key,
                         "load_estimate": self._frozen_hl_past_slots[ts_key],
@@ -601,6 +639,7 @@ class HauslastCoordinator:
                         "is_forecast": False,
                     }
                     self._frozen_past_slots.append(entry)
+                    self._save_cache(_CACHE_SOC, self._frozen_past_slots)
                     out.append(entry)
                     soc = entry["soc_kwh"]
 
