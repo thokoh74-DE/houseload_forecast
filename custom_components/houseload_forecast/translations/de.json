@@ -14,7 +14,7 @@
           "force_export_power": "Force-Export Leistung / Force Export Power (number)",
           "hauslast_stundlich_sensor": "Hauslast stündlich / House Load Hourly (Recorder-Sensor)",
           "history_weeks": "Datenzeitraum / History Period (0 = unbegrenzt / unlimited)",
-          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen (Solcast, Attribut detailedHourly)"
+          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen / PV Forecast Day after Tomorrow (Solcast)"
         },
         "data_description": {
           "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh / Total battery capacity in kWh",
@@ -26,7 +26,7 @@
           "force_export_power": "Optional – leer lassen wenn nicht vorhanden / leave empty if not available",
           "hauslast_stundlich_sensor": "Für historische Profilberechnung / Used for historical profile calculation",
           "history_weeks": "Anzahl Wochen für historische Berechnung. 0 = alle Daten / Number of weeks for historical calculation. 0 = all data. Default: 8",
-          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt"
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now"
         }
       },
       "fallback_wt": {
@@ -110,10 +110,10 @@
           "fallback_wt": "Fallback-Profile bearbeiten / Edit Fallback Profiles"
         },
         "data": {
-          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen (Solcast, Attribut detailedHourly)"
+          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen / PV Forecast Day after Tomorrow (Solcast)"
         },
         "data_description": {
-          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt"
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now"
         }
       },
       "sensors": {
@@ -129,7 +129,7 @@
           "force_export_power": "Force-Export Leistung / Force Export Power (number)",
           "hauslast_stundlich_sensor": "Hauslast stündlich / House Load Hourly (Recorder-Sensor)",
           "history_weeks": "Datenzeitraum / History Period (0 = unbegrenzt / unlimited)",
-          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen (Solcast, Attribut detailedHourly)"
+          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen / PV Forecast Day after Tomorrow (Solcast)"
         },
         "data_description": {
           "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh / Total battery capacity in kWh",
@@ -141,7 +141,7 @@
           "force_export_power": "Optional – leer lassen wenn nicht vorhanden / leave empty if not available",
           "hauslast_stundlich_sensor": "Für historische Profilberechnung / Used for historical profile calculation",
           "history_weeks": "Anzahl Wochen für historische Berechnung. 0 = alle Daten / Number of weeks for historical calculation. 0 = all data. Default: 8",
-          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt"
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now"
         }
       },
       "fallback_wt": {

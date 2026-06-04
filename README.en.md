@@ -490,6 +490,7 @@ series:
     color: "#ffa94d"
     unit: kWh
     float_precision: 1
+    transform: return parseFloat(entity.state);
     show:
       in_chart: false
       in_header: true
@@ -498,6 +499,7 @@ series:
     color: "#ffa98d"
     unit: kWh
     float_precision: 1
+    transform: return parseFloat(entity.state);
     show:
       in_chart: false
       in_header: true
