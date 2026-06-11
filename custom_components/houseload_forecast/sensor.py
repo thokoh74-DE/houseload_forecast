@@ -734,6 +734,13 @@ class _HauslastBaseSensor(SensorEntity):
         self._entry = entry
 
     @property
+    def available(self) -> bool:
+        """Sensor ist erst verfügbar wenn der Coordinator mindestens einmal
+        erfolgreich durchgerechnet hat. Verhindert, dass 0-Startwerte nach
+        einem HA-Neustart im Recorder aufgezeichnet werden."""
+        return self._coordinator._has_valid_data
+
+    @property
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self._entry.entry_id)},
