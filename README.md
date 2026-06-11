@@ -582,6 +582,11 @@ Dieses Verhalten tritt immer auf wenn Translation-Dateien einer Custom Integrati
 
 Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md](CHANGELOG.md).
 
+### v1.1.2
+- **Verbrauchszähler intern erzeugt:** Statt eines extern konfigurierten Recorder-Sensors genügt jetzt ein Leistungssensor in W (z. B. `sensor.alphaess_inverter_current_house_load`). Die Integration erzeugt `sensor.hlf_hauslast_stundlich` automatisch via Riemann-Integral (TOTAL_INCREASING, überlebt Neustarts)
+- **Force-Export: switch wählbar:** Das Feld „Force-Export aktiv" akzeptiert jetzt auch `switch`-Entitäten (z. B. `switch.alphaess_force_charge` der AlphaESS Modbus TCP - Home Assistant Integration von senalse)
+- **Neue Standardsensoren:** Voreinstellungen auf typische Entitäten der AlphaESS Modbus TCP - Home Assistant Integration von senalse angepasst (`sensor.alphaess_soc_battery`, `sensor.alphaess_discharging_cutoff_soc`, `switch.alphaess_force_charge`, `sensor.alphaess_inverter_current_house_load`)
+
 ### v1.1.1
 - Restlaufzeit-Sprünge behoben (Debounce: nur `is_forecast: true`-Slots für Berechnung)
 - SOC-Forecast startet jetzt immer ab 00:00 Uhr; vergangene SOC-Slots werden eingefroren und nicht neu berechnet
@@ -616,5 +621,4 @@ MIT License – siehe [LICENSE](LICENSE)
 
 - [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) für die PV-Vorhersage
 - [ApexCharts Card](https://github.com/RomRider/apexcharts-card) für die Dashboard-Visualisierung
-- [homeassistant-alphaESS](https://github.com/CharlesGillanders/homeassistant-alphaESS) von CharlesGillanders für die AlphaESS-Integration
-- [Integrating AlphaESS Inverter into Home Assistant via Modbus](https://projects.hillviewlodge.ie/alphaess/) von Projects@Hillview
+- [AlphaESS Modbus TCP - Home Assistant Integration von senalse](https://github.com/senalse/ha-alphaess-modbus)

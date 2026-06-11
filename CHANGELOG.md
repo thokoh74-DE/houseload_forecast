@@ -6,6 +6,27 @@
 
 ## Deutsch
 
+### v1.1.2
+
+**Verbrauchszähler intern erzeugt – kein externer Recorder-Sensor mehr nötig**
+- Bisher musste ein externer Sensor (`sensor.hauslast_stundlich`) manuell konfiguriert und vom HA-Recorder aufgezeichnet werden.
+- Ab v1.1.2 genügt die Auswahl eines **Leistungssensors in Watt** (z. B. `sensor.alphaess_inverter_current_house_load` der AlphaESS Modbus TCP - Home Assistant Integration von senalse).
+- Die Integration erzeugt daraus automatisch den Verbrauchszähler `sensor.hlf_hauslast_stundlich` (kWh, stetig steigend, TOTAL_INCREASING).
+- Der Zähler wird via Riemann-Integral (links-Rechteck) aus den Zustandsänderungen des Leistungssensors akkumuliert.
+- Der Zählerstand überlebt HA-Neustarts dank `RestoreEntity`.
+- Konfiguration unter: Einstellungen → Sensoren → **Hauslast aktuell / House Load Current (Sensor in W)**
+
+**Force-Export: input_boolean und switch wählbar**
+- Das Feld „Force-Export aktiv" akzeptiert jetzt sowohl `input_boolean`- als auch `switch`-Entitäten.
+- Ermöglicht die direkte Nutzung des Force-Charge/Export-Schalters der AlphaESS Modbus TCP - Home Assistant Integration von senalse.
+
+**Neue Standardsensoren aus der AlphaESS Modbus TCP - Home Assistant Integration von senalse**
+- Voreingestellte Sensor-IDs wurden auf die typischen Entitäten der AlphaESS Modbus TCP - Home Assistant Integration von senalse angepasst:
+  - Akku-Ladestand: `sensor.alphaess_soc_battery`
+  - Entladeschluss: `sensor.alphaess_discharging_cutoff_soc`
+  - Force-Export aktiv: `switch.alphaess_force_charge`
+  - Hauslast aktuell: `sensor.alphaess_inverter_current_house_load`
+
 ### v1.1.1
 
 **Akku-Restlaufzeit: Sprünge durch Debounce behoben**
@@ -100,6 +121,27 @@
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v1.1.2
+
+**Consumption counter generated internally – no external recorder sensor required**
+- Previously, an external sensor (`sensor.hauslast_stundlich`) had to be configured manually and recorded by the HA recorder.
+- From v1.1.2, all that is needed is selecting a **power sensor in watts** (e.g. `sensor.alphaess_inverter_current_house_load` from the AlphaESS Modbus TCP - Home Assistant Integration by senalse).
+- The integration automatically generates the consumption counter `sensor.hlf_hauslast_stundlich` (kWh, monotonically increasing, TOTAL_INCREASING).
+- The counter is accumulated via Riemann left-rectangle integration from state changes of the power sensor.
+- The counter value survives HA restarts thanks to `RestoreEntity`.
+- Configure under: Settings → Sensors → **Hauslast aktuell / House Load Current (Sensor in W)**
+
+**Force Export: input_boolean and switch selectable**
+- The "Force Export Active" field now accepts both `input_boolean` and `switch` entities.
+- Enables direct use of the Force Charge/Export switch from the AlphaESS Modbus TCP - Home Assistant Integration by senalse.
+
+**New default sensors from the AlphaESS Modbus TCP - Home Assistant Integration by senalse**
+- Pre-filled sensor IDs have been updated to the typical entities of the AlphaESS Modbus TCP - Home Assistant Integration by senalse:
+  - Battery State of Charge: `sensor.alphaess_soc_battery`
+  - Discharging Cutoff SoC: `sensor.alphaess_discharging_cutoff_soc`
+  - Force Export Active: `switch.alphaess_force_charge`
+  - House Load Current: `sensor.alphaess_inverter_current_house_load`
 
 ### v1.1.1
 

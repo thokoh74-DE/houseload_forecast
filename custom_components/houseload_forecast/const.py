@@ -8,7 +8,8 @@ CONF_PV_TOMORROW_SENSOR = "pv_forecast_tomorrow_sensor"
 CONF_PV_DAY_AFTER_TOMORROW_SENSOR = "pv_forecast_day_after_tomorrow_sensor"
 CONF_FORCE_EXPORT_BOOLEAN = "force_export_boolean"
 CONF_FORCE_EXPORT_POWER = "force_export_power"
-CONF_HAUSLAST_STUNDLICH = "hauslast_stundlich_sensor"
+CONF_HAUSLAST_AKTUELL = "hauslast_aktuell_sensor"   # NEU v1.1.2: Leistungssensor in W
+CONF_HAUSLAST_STUNDLICH = "hauslast_stundlich_sensor"  # intern: abgeleiteter Zählersensor
 CONF_HISTORY_WEEKS = "history_weeks"  # 1–52 oder 0 = unbegrenzt
 
 DEFAULT_HISTORY_WEEKS = 8   # Voreinstellung: 8 Wochen
@@ -33,3 +34,6 @@ DEFAULT_FALLBACK_WE = [
 
 FALLBACK_WT_KEYS = [f"fallback_wt_{h:02d}" for h in range(24)]
 FALLBACK_WE_KEYS = [f"fallback_we_{h:02d}" for h in range(24)]
+
+# Interne Entity-ID des von der Integration erzeugten stündlichen Verbrauchszählers
+GENERATED_HAUSLAST_SENSOR_ID = "sensor.hlf_hauslast_stundlich"

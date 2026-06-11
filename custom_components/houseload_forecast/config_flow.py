@@ -16,7 +16,7 @@ from .const import (
     CONF_PV_DAY_AFTER_TOMORROW_SENSOR,
     CONF_FORCE_EXPORT_BOOLEAN,
     CONF_FORCE_EXPORT_POWER,
-    CONF_HAUSLAST_STUNDLICH,
+    CONF_HAUSLAST_AKTUELL,
     CONF_HISTORY_WEEKS,
     DEFAULT_HISTORY_WEEKS,
     DEFAULT_FALLBACK_WT,
@@ -40,11 +40,15 @@ def _history_weeks_selector():
 def _entity_selector(domain):
     return selector.selector({"entity": {"domain": domain}})
 
+def _boolean_entity_selector():
+    """Selector für input_boolean UND switch (beide liefern 'on'/'off')."""
+    return selector.selector({"entity": {"domain": ["input_boolean", "switch"]}})
+
 
 def _sensors_schema(data: dict) -> vol.Schema:
     return vol.Schema({
         vol.Required(CONF_BAT_CAPACITY_SENSOR,
-                     default=data.get(CONF_BAT_CAPACITY_SENSOR, "sensor.alb002022083046_current_capacity")): _sensor_selector(),
+                     default=data.get(CONF_BAT_CAPACITY_SENSOR, "sensor.alphaess_inverter_battery_capacity")): _sensor_selector(),
         vol.Required(CONF_BAT_SOC_SENSOR,
                      default=data.get(CONF_BAT_SOC_SENSOR, "sensor.alphaess_soc_battery")): _sensor_selector(),
         vol.Required(CONF_BAT_CUTOFF_SENSOR,
@@ -58,11 +62,11 @@ def _sensors_schema(data: dict) -> vol.Schema:
             description={"suggested_value": data.get(CONF_PV_DAY_AFTER_TOMORROW_SENSOR)},
         ): _sensor_selector(),
         vol.Optional(CONF_FORCE_EXPORT_BOOLEAN,
-                     default=data.get(CONF_FORCE_EXPORT_BOOLEAN, vol.UNDEFINED)): _entity_selector("input_boolean"),
+                     default=data.get(CONF_FORCE_EXPORT_BOOLEAN, "switch.alphaess_force_charge")): _boolean_entity_selector(),
         vol.Optional(CONF_FORCE_EXPORT_POWER,
                      default=data.get(CONF_FORCE_EXPORT_POWER, vol.UNDEFINED)): _entity_selector("number"),
-        vol.Required(CONF_HAUSLAST_STUNDLICH,
-                     default=data.get(CONF_HAUSLAST_STUNDLICH, "sensor.hauslast_stundlich")): _sensor_selector(),
+        vol.Required(CONF_HAUSLAST_AKTUELL,
+                     default=data.get(CONF_HAUSLAST_AKTUELL, "sensor.alphaess_inverter_current_house_load")): _sensor_selector(),
         vol.Required(CONF_HISTORY_WEEKS,
                      default=int(data.get(CONF_HISTORY_WEEKS, DEFAULT_HISTORY_WEEKS))): _history_weeks_selector(),
     })

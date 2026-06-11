@@ -29,7 +29,7 @@ from .const import (
     CONF_PV_DAY_AFTER_TOMORROW_SENSOR,
     CONF_FORCE_EXPORT_BOOLEAN,
     CONF_FORCE_EXPORT_POWER,
-    CONF_HAUSLAST_STUNDLICH,
+    CONF_HAUSLAST_AKTUELL,
     CONF_HISTORY_WEEKS,
     DEFAULT_HISTORY_WEEKS,
     MIN_DATA_DAYS,
@@ -38,6 +38,7 @@ from .const import (
     DEFAULT_FALLBACK_WE,
     FALLBACK_WT_KEYS,
     FALLBACK_WE_KEYS,
+    GENERATED_HAUSLAST_SENSOR_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -115,7 +116,11 @@ async def async_setup_entry(
     coordinator = HauslastCoordinator(hass, cfg, fallback_wt, fallback_we)
     await coordinator.async_refresh()
 
+    # NEU v1.1.2: Verbrauchszähler-Sensor (aus aktueller Leistung abgeleitet)
+    hauslast_stundlich_sensor = HauslastStundlichSensor(entry)
+
     sensors = [
+        hauslast_stundlich_sensor,
         HauslastFallbackSensor(coordinator, "wochentag", entry),
         HauslastFallbackSensor(coordinator, "wochenende", entry),
         HauslastPrognoseHeuteSensor(coordinator, entry),
@@ -136,7 +141,6 @@ async def async_setup_entry(
                          "Remaining Capacity to Cutoff", "kWh", None, "mdi:battery-arrow-down-outline"),
         DiagnosticSensor(coordinator, entry, "force_on",
                          "Force Export Active", None, None, "mdi:transmission-tower-export"),
-        # NEU: Zeitpunkt Akku leer
         DiagnosticSensor(coordinator, entry, "battery_empty_at",
                          "Battery Empty At", None, None, "mdi:battery-alert"),
     ]
@@ -144,7 +148,8 @@ async def async_setup_entry(
     async_add_entities(sensors, True)
     coordinator.async_register_entities(sensors)
 
-    watch_entities = [
+    # Forecast-Neuberechnung bei Änderung der Eingangssensoren
+    watch_forecast = [
         cfg.get(CONF_BAT_CAPACITY_SENSOR),
         cfg.get(CONF_BAT_SOC_SENSOR),
         cfg.get(CONF_BAT_CUTOFF_SENSOR),
@@ -153,17 +158,28 @@ async def async_setup_entry(
         cfg.get(CONF_PV_DAY_AFTER_TOMORROW_SENSOR),
         cfg.get(CONF_FORCE_EXPORT_BOOLEAN),
         cfg.get(CONF_FORCE_EXPORT_POWER),
-        cfg.get(CONF_HAUSLAST_STUNDLICH),
+        GENERATED_HAUSLAST_SENSOR_ID,
     ]
-    watch_entities = [e for e in watch_entities if e]
+    watch_forecast = [e for e in watch_forecast if e]
 
     @callback
     def _state_changed(event):
         coordinator.async_update_all()
 
     entry.async_on_unload(
-        async_track_state_change_event(hass, watch_entities, _state_changed)
+        async_track_state_change_event(hass, watch_forecast, _state_changed)
     )
+
+    # Leistungssensor → Verbrauchszähler akkumulieren
+    aktuell_entity = cfg.get(CONF_HAUSLAST_AKTUELL)
+    if aktuell_entity:
+        @callback
+        def _aktuell_changed(event):
+            hauslast_stundlich_sensor.handle_power_update(hass, aktuell_entity)
+
+        entry.async_on_unload(
+            async_track_state_change_event(hass, [aktuell_entity], _aktuell_changed)
+        )
 
 
 class HauslastCoordinator:
@@ -323,8 +339,8 @@ class HauslastCoordinator:
             history_param = "-36500 days"
             history_label = "gesamte Datenbasis"
 
-        hauslast_id = self.cfg.get(CONF_HAUSLAST_STUNDLICH, "sensor.hauslast_stundlich")
-        statistic_id = hauslast_id
+        # v1.1.2: Von der Integration erzeugter Verbrauchszähler
+        statistic_id = GENERATED_HAUSLAST_SENSOR_ID
 
         try:
             con = sqlite3.connect(DB_PATH)
@@ -1013,3 +1029,98 @@ class DiagnosticSensor(_HauslastBaseSensor):
         if isinstance(val, float):
             return round(val, 3)
         return val
+
+
+# ── HauslastStundlichSensor ────────────────────────────────────────────────────
+# NEU v1.1.2: Verbrauchszähler – wird aus dem konfigurierten Leistungssensor (W)
+# via Riemann-Integral (links-Rechteck) akkumuliert und vom HA-Recorder
+# als stündliche Statistik aufgezeichnet. Ersetzt den externen Recorder-Sensor.
+
+class HauslastStundlichSensor(SensorEntity, RestoreEntity):
+    """Abgeleiteter Hauslast-Verbrauchszähler (kWh, stetig steigend).
+
+    Akkumuliert den Leistungssensor (W) der senalse-Integration via
+    Riemann-Integral und liefert einen HA-Recorder-kompatiblen
+    TOTAL_INCREASING-Sensor für die historische Profilberechnung.
+    Die entity_id ist fix: sensor.hlf_hauslast_stundlich.
+    """
+
+    _attr_has_entity_name = False
+    _attr_name = "Hauslast stündlich"
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_icon = "mdi:home-lightning-bolt"
+    _attr_should_poll = False
+
+    def __init__(self, entry: ConfigEntry) -> None:
+        self._entry = entry
+        self._attr_unique_id = f"{DOMAIN}_hauslast_stundlich_{entry.entry_id}"
+        self.entity_id = GENERATED_HAUSLAST_SENSOR_ID
+        self._total_kwh: float = 0.0
+        self._last_update: datetime | None = None
+        self._last_power_w: float | None = None
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, self._entry.entry_id)},
+            "name": "House Load Forecast",
+            "manufacturer": "Custom",
+            "model": "House Load Forecast & PV Battery Runtime",
+        }
+
+    @property
+    def native_value(self) -> float:
+        return round(self._total_kwh, 4)
+
+    async def async_added_to_hass(self) -> None:
+        """Letzten gespeicherten Zählerstand wiederherstellen."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.state not in ("unknown", "unavailable", None):
+            try:
+                self._total_kwh = float(last_state.state)
+                _LOGGER.debug(
+                    "HauslastStundlichSensor: Zählerstand nach Neustart wiederhergestellt: %.4f kWh",
+                    self._total_kwh,
+                )
+            except (ValueError, TypeError):
+                self._total_kwh = 0.0
+        self.async_write_ha_state()
+
+    @callback
+    def handle_power_update(self, hass, power_entity_id: str) -> None:
+        """Leistungswert (W) auslesen und Zähler akkumulieren.
+
+        Wird bei jeder Zustandsänderung des Leistungssensors aufgerufen.
+        Integriert via Riemann-links-Rechteck: ΔkWh = P_alt [W] × Δt [h].
+        """
+        now = dt_util.now()
+
+        # Leistung des Vorgänger-Intervalls akkumulieren (Riemann links)
+        if self._last_update is not None and self._last_power_w is not None:
+            delta_h = (now - self._last_update).total_seconds() / 3600.0
+            # Plausibilitätsprüfung: max. 2 Stunden Lücke berücksichtigen
+            if 0 < delta_h <= 2.0:
+                delta_kwh = self._last_power_w * delta_h / 1000.0
+                if delta_kwh > 0:
+                    self._total_kwh += delta_kwh
+                    _LOGGER.debug(
+                        "HauslastStundlichSensor: +%.4f kWh (P=%.1f W, Δt=%.2f h) → Gesamt: %.4f kWh",
+                        delta_kwh, self._last_power_w, delta_h, self._total_kwh,
+                    )
+
+        # Neuen Leistungswert merken
+        state = hass.states.get(power_entity_id)
+        if state and state.state not in ("unknown", "unavailable", ""):
+            try:
+                power_w = float(state.state)
+                self._last_power_w = max(power_w, 0.0)  # negative Werte ignorieren
+            except (ValueError, TypeError):
+                self._last_power_w = None
+        else:
+            self._last_power_w = None
+
+        self._last_update = now
+        self.async_write_ha_state()
