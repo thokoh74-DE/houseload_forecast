@@ -1,0 +1,257 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sensors & Settings",
+        "description": "Select the sensors for battery, PV forecast and household load.",
+        "data": {
+          "bat_capacity_sensor": "Effective Battery Capacity (sensor in kWh)",
+          "bat_soc_sensor": "Battery State of Charge (sensor in %)",
+          "bat_cutoff_sensor": "Discharge Cutoff / Reserve (sensor in %)",
+          "pv_forecast_today_sensor": "PV Forecast Today (Solcast)",
+          "pv_forecast_tomorrow_sensor": "PV Forecast Tomorrow (Solcast)",
+          "force_export_boolean": "Force Export Active (input_boolean or switch)",
+          "force_export_power": "Force Export Power (number)",
+          "history_weeks": "History Period (0 = unlimited)",
+          "pv_forecast_day_after_tomorrow_sensor": "PV Forecast Day After Tomorrow (Solcast, attribute detailedHourly)",
+          "hauslast_aktuell_sensor": "House Load Current (Sensor in W)"
+        },
+        "data_description": {
+          "bat_capacity_sensor": "Total battery capacity in kWh",
+          "bat_soc_sensor": "Current state of charge in percent",
+          "bat_cutoff_sensor": "Minimum charge level in percent (reserve)",
+          "pv_forecast_today_sensor": "Must contain attribute detailedHourly with pv_estimate per hour",
+          "pv_forecast_tomorrow_sensor": "Must contain attribute detailedHourly with pv_estimate per hour",
+          "force_export_boolean": "Optional – input_boolean or switch from the senalse integration",
+          "force_export_power": "Optional – leave empty if not available",
+          "history_weeks": "Number of weeks for historical calculation. 0 = entire data history. Default: 8",
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast sensor for the day after tomorrow – optional, required for true 48h forecast from now",
+          "hauslast_aktuell_sensor": "Power sensor in watts – the integration automatically derives the consumption counter sensor.hlf_hauslast_stundlich from this"
+        }
+      },
+      "fallback_wt": {
+        "title": "Weekday – Fallback Profile",
+        "description": "Manual hourly profiles in watts for weekdays (Mon–Fri). Used when insufficient historical data is available.",
+        "data": {
+          "fallback_wt_00": "00:00",
+          "fallback_wt_01": "01:00",
+          "fallback_wt_02": "02:00",
+          "fallback_wt_03": "03:00",
+          "fallback_wt_04": "04:00",
+          "fallback_wt_05": "05:00",
+          "fallback_wt_06": "06:00",
+          "fallback_wt_07": "07:00",
+          "fallback_wt_08": "08:00",
+          "fallback_wt_09": "09:00",
+          "fallback_wt_10": "10:00",
+          "fallback_wt_11": "11:00",
+          "fallback_wt_12": "12:00",
+          "fallback_wt_13": "13:00",
+          "fallback_wt_14": "14:00",
+          "fallback_wt_15": "15:00",
+          "fallback_wt_16": "16:00",
+          "fallback_wt_17": "17:00",
+          "fallback_wt_18": "18:00",
+          "fallback_wt_19": "19:00",
+          "fallback_wt_20": "20:00",
+          "fallback_wt_21": "21:00",
+          "fallback_wt_22": "22:00",
+          "fallback_wt_23": "23:00"
+        },
+        "data_description": {}
+      },
+      "fallback_we": {
+        "title": "Weekend – Fallback Profile",
+        "description": "Manual hourly profiles in watts for weekends (Sat+Sun). Used when insufficient historical data is available.",
+        "data": {
+          "fallback_we_00": "00:00",
+          "fallback_we_01": "01:00",
+          "fallback_we_02": "02:00",
+          "fallback_we_03": "03:00",
+          "fallback_we_04": "04:00",
+          "fallback_we_05": "05:00",
+          "fallback_we_06": "06:00",
+          "fallback_we_07": "07:00",
+          "fallback_we_08": "08:00",
+          "fallback_we_09": "09:00",
+          "fallback_we_10": "10:00",
+          "fallback_we_11": "11:00",
+          "fallback_we_12": "12:00",
+          "fallback_we_13": "13:00",
+          "fallback_we_14": "14:00",
+          "fallback_we_15": "15:00",
+          "fallback_we_16": "16:00",
+          "fallback_we_17": "17:00",
+          "fallback_we_18": "18:00",
+          "fallback_we_19": "19:00",
+          "fallback_we_20": "20:00",
+          "fallback_we_21": "21:00",
+          "fallback_we_22": "22:00",
+          "fallback_we_23": "23:00"
+        },
+        "data_description": {}
+      }
+    },
+    "error": {
+      "cannot_connect": "Connection failed",
+      "invalid_sensor": "Sensor not found or unavailable"
+    },
+    "abort": {
+      "already_configured": "Hauslast Prognose is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Settings",
+        "description": "What would you like to edit?",
+        "menu_options": {
+          "sensors": "Edit Sensors",
+          "fallback_wt": "Edit Fallback Profiles"
+        },
+        "data": {
+          "pv_forecast_day_after_tomorrow_sensor": "PV Forecast Day After Tomorrow (Solcast, attribute detailedHourly)"
+        },
+        "data_description": {
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast sensor for the day after tomorrow – optional, required for true 48h forecast from now"
+        }
+      },
+      "sensors": {
+        "title": "Sensors & Settings",
+        "description": "Adjust sensors and history period.",
+        "data": {
+          "bat_capacity_sensor": "Effective Battery Capacity (sensor in kWh)",
+          "bat_soc_sensor": "Battery State of Charge (sensor in %)",
+          "bat_cutoff_sensor": "Discharge Cutoff / Reserve (sensor in %)",
+          "pv_forecast_today_sensor": "PV Forecast Today (Solcast)",
+          "pv_forecast_tomorrow_sensor": "PV Forecast Tomorrow (Solcast)",
+          "force_export_boolean": "Force Export Active (input_boolean or switch)",
+          "force_export_power": "Force Export Power (number)",
+          "history_weeks": "History Period (0 = unlimited)",
+          "pv_forecast_day_after_tomorrow_sensor": "PV Forecast Day After Tomorrow (Solcast, attribute detailedHourly)",
+          "hauslast_aktuell_sensor": "House Load Current (Sensor in W)"
+        },
+        "data_description": {
+          "bat_capacity_sensor": "Total battery capacity in kWh",
+          "bat_soc_sensor": "Current state of charge in percent",
+          "bat_cutoff_sensor": "Minimum charge level in percent (reserve)",
+          "pv_forecast_today_sensor": "Must contain attribute detailedHourly with pv_estimate per hour",
+          "pv_forecast_tomorrow_sensor": "Must contain attribute detailedHourly with pv_estimate per hour",
+          "force_export_boolean": "Optional – input_boolean or switch from the senalse integration",
+          "force_export_power": "Optional – leave empty if not available",
+          "history_weeks": "Number of weeks for historical calculation. 0 = entire data history. Default: 8",
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast sensor for the day after tomorrow – optional, required for true 48h forecast from now",
+          "hauslast_aktuell_sensor": "Power sensor in watts – the integration automatically derives the consumption counter sensor.hlf_hauslast_stundlich from this"
+        }
+      },
+      "fallback_wt": {
+        "title": "Weekday – Fallback Profile",
+        "description": "Hourly profiles in watts for weekdays (Mon–Fri).",
+        "data": {
+          "fallback_wt_00": "00:00",
+          "fallback_wt_01": "01:00",
+          "fallback_wt_02": "02:00",
+          "fallback_wt_03": "03:00",
+          "fallback_wt_04": "04:00",
+          "fallback_wt_05": "05:00",
+          "fallback_wt_06": "06:00",
+          "fallback_wt_07": "07:00",
+          "fallback_wt_08": "08:00",
+          "fallback_wt_09": "09:00",
+          "fallback_wt_10": "10:00",
+          "fallback_wt_11": "11:00",
+          "fallback_wt_12": "12:00",
+          "fallback_wt_13": "13:00",
+          "fallback_wt_14": "14:00",
+          "fallback_wt_15": "15:00",
+          "fallback_wt_16": "16:00",
+          "fallback_wt_17": "17:00",
+          "fallback_wt_18": "18:00",
+          "fallback_wt_19": "19:00",
+          "fallback_wt_20": "20:00",
+          "fallback_wt_21": "21:00",
+          "fallback_wt_22": "22:00",
+          "fallback_wt_23": "23:00"
+        },
+        "data_description": {}
+      },
+      "fallback_we": {
+        "title": "Weekend – Fallback Profile",
+        "description": "Hourly profiles in watts for weekends (Sat+Sun).",
+        "data": {
+          "fallback_we_00": "00:00",
+          "fallback_we_01": "01:00",
+          "fallback_we_02": "02:00",
+          "fallback_we_03": "03:00",
+          "fallback_we_04": "04:00",
+          "fallback_we_05": "05:00",
+          "fallback_we_06": "06:00",
+          "fallback_we_07": "07:00",
+          "fallback_we_08": "08:00",
+          "fallback_we_09": "09:00",
+          "fallback_we_10": "10:00",
+          "fallback_we_11": "11:00",
+          "fallback_we_12": "12:00",
+          "fallback_we_13": "13:00",
+          "fallback_we_14": "14:00",
+          "fallback_we_15": "15:00",
+          "fallback_we_16": "16:00",
+          "fallback_we_17": "17:00",
+          "fallback_we_18": "18:00",
+          "fallback_we_19": "19:00",
+          "fallback_we_20": "20:00",
+          "fallback_we_21": "21:00",
+          "fallback_we_22": "22:00",
+          "fallback_we_23": "23:00"
+        },
+        "data_description": {}
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "forecast_today": {
+        "name": "House Load Forecast Today"
+      },
+      "forecast_tomorrow": {
+        "name": "House Load Forecast Tomorrow"
+      },
+      "battery_runtime": {
+        "name": "PV Battery Runtime"
+      },
+      "fallback_weekday": {
+        "name": "House Load Fallback Weekday"
+      },
+      "fallback_weekend": {
+        "name": "House Load Fallback Weekend"
+      },
+      "diag_calculation_timestamp": {
+        "name": "Last Forecast Update"
+      },
+      "diag_data_days": {
+        "name": "Data History Days"
+      },
+      "diag_soc_pct_raw": {
+        "name": "Battery State of Charge"
+      },
+      "diag_bat_max_kwh": {
+        "name": "Effective Battery Capacity"
+      },
+      "diag_bat_kwh": {
+        "name": "Usable Capacity"
+      },
+      "diag_bat_rest_kwh": {
+        "name": "Remaining Capacity to Cutoff"
+      },
+      "diag_force_on": {
+        "name": "Force Export Active"
+      },
+      "diag_battery_empty_at": {
+        "name": "Akku leer um"
+      },
+      "forecast_day_after_tomorrow": {
+        "name": "House Load Forecast Day After Tomorrow"
+      }
+    }
+  }
+}

@@ -1,0 +1,257 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sensoren & Einstellungen / Sensors & Settings",
+        "description": "Wähle die Sensoren für Batterie, PV-Prognose und Hauslast aus.",
+        "data": {
+          "bat_capacity_sensor": "Effektive Akkukapazität / Effective Battery Capacity (Sensor in kWh)",
+          "bat_soc_sensor": "Akku-Ladestand / Battery State of Charge (Sensor in %)",
+          "bat_cutoff_sensor": "Entladeschluss / Discharge Cutoff (Sensor in %)",
+          "pv_forecast_today_sensor": "PV-Prognose Heute / PV Forecast Today (Solcast)",
+          "pv_forecast_tomorrow_sensor": "PV-Prognose Morgen / PV Forecast Tomorrow (Solcast)",
+          "force_export_boolean": "Force-Export aktiv / Force Export Active (input_boolean or switch)",
+          "force_export_power": "Force-Export Leistung / Force Export Power (number)",
+          "history_weeks": "Datenzeitraum / History Period (0 = unbegrenzt / unlimited)",
+          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen / PV Forecast Day after Tomorrow (Solcast)",
+          "hauslast_aktuell_sensor": "Hauslast aktuell / House Load Current (Sensor in W)"
+        },
+        "data_description": {
+          "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh / Total battery capacity in kWh",
+          "bat_soc_sensor": "Aktueller Ladestand in Prozent / Current state of charge in percent",
+          "bat_cutoff_sensor": "Mindest-Ladestand in Prozent / Minimum charge level in percent",
+          "pv_forecast_today_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
+          "pv_forecast_tomorrow_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
+          "force_export_boolean": "Optional – input_boolean oder switch der senalse-Integration",
+          "force_export_power": "Optional – leer lassen wenn nicht vorhanden / leave empty if not available",
+          "history_weeks": "Anzahl Wochen für historische Berechnung. 0 = alle Daten / Number of weeks for historical calculation. 0 = all data. Default: 8",
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now",
+          "hauslast_aktuell_sensor": "Leistungssensor in Watt – die Integration erstellt daraus automatisch den Verbrauchszähler sensor.hlf_hauslast_stundlich"
+        }
+      },
+      "fallback_wt": {
+        "title": "Wochentag – Fallback-Profil / Weekday – Fallback Profile",
+        "description": "Manuelle Stundenprofile in Watt für Werktage (Mo–Fr).\nManual hourly profiles in watts for weekdays (Mon–Fri).",
+        "data": {
+          "fallback_wt_00": "00:00 Uhr",
+          "fallback_wt_01": "01:00 Uhr",
+          "fallback_wt_02": "02:00 Uhr",
+          "fallback_wt_03": "03:00 Uhr",
+          "fallback_wt_04": "04:00 Uhr",
+          "fallback_wt_05": "05:00 Uhr",
+          "fallback_wt_06": "06:00 Uhr",
+          "fallback_wt_07": "07:00 Uhr",
+          "fallback_wt_08": "08:00 Uhr",
+          "fallback_wt_09": "09:00 Uhr",
+          "fallback_wt_10": "10:00 Uhr",
+          "fallback_wt_11": "11:00 Uhr",
+          "fallback_wt_12": "12:00 Uhr",
+          "fallback_wt_13": "13:00 Uhr",
+          "fallback_wt_14": "14:00 Uhr",
+          "fallback_wt_15": "15:00 Uhr",
+          "fallback_wt_16": "16:00 Uhr",
+          "fallback_wt_17": "17:00 Uhr",
+          "fallback_wt_18": "18:00 Uhr",
+          "fallback_wt_19": "19:00 Uhr",
+          "fallback_wt_20": "20:00 Uhr",
+          "fallback_wt_21": "21:00 Uhr",
+          "fallback_wt_22": "22:00 Uhr",
+          "fallback_wt_23": "23:00 Uhr"
+        },
+        "data_description": {}
+      },
+      "fallback_we": {
+        "title": "Wochenende – Fallback-Profil / Weekend – Fallback Profile",
+        "description": "Manuelle Stundenprofile in Watt für Wochenenden (Sa+So).\nManual hourly profiles in watts for weekends (Sat+Sun).",
+        "data": {
+          "fallback_we_00": "00:00 Uhr",
+          "fallback_we_01": "01:00 Uhr",
+          "fallback_we_02": "02:00 Uhr",
+          "fallback_we_03": "03:00 Uhr",
+          "fallback_we_04": "04:00 Uhr",
+          "fallback_we_05": "05:00 Uhr",
+          "fallback_we_06": "06:00 Uhr",
+          "fallback_we_07": "07:00 Uhr",
+          "fallback_we_08": "08:00 Uhr",
+          "fallback_we_09": "09:00 Uhr",
+          "fallback_we_10": "10:00 Uhr",
+          "fallback_we_11": "11:00 Uhr",
+          "fallback_we_12": "12:00 Uhr",
+          "fallback_we_13": "13:00 Uhr",
+          "fallback_we_14": "14:00 Uhr",
+          "fallback_we_15": "15:00 Uhr",
+          "fallback_we_16": "16:00 Uhr",
+          "fallback_we_17": "17:00 Uhr",
+          "fallback_we_18": "18:00 Uhr",
+          "fallback_we_19": "19:00 Uhr",
+          "fallback_we_20": "20:00 Uhr",
+          "fallback_we_21": "21:00 Uhr",
+          "fallback_we_22": "22:00 Uhr",
+          "fallback_we_23": "23:00 Uhr"
+        },
+        "data_description": {}
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_sensor": "Sensor nicht gefunden oder nicht verfügbar"
+    },
+    "abort": {
+      "already_configured": "Hauslast Prognose ist bereits eingerichtet"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Einstellungen / Settings",
+        "description": "Was möchtest du bearbeiten? / What would you like to edit?",
+        "menu_options": {
+          "sensors": "Sensoren anpassen / Edit Sensors",
+          "fallback_wt": "Fallback-Profile bearbeiten / Edit Fallback Profiles"
+        },
+        "data": {
+          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen / PV Forecast Day after Tomorrow (Solcast)"
+        },
+        "data_description": {
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now"
+        }
+      },
+      "sensors": {
+        "title": "Sensoren & Einstellungen / Sensors & Settings",
+        "description": "Sensoren und Datenzeitraum anpassen.\nAdjust sensors and history period.",
+        "data": {
+          "bat_capacity_sensor": "Effektive Akkukapazität / Effective Battery Capacity (Sensor in kWh)",
+          "bat_soc_sensor": "Akku-Ladestand / Battery State of Charge (Sensor in %)",
+          "bat_cutoff_sensor": "Entladeschluss / Discharge Cutoff (Sensor in %)",
+          "pv_forecast_today_sensor": "PV-Prognose Heute / PV Forecast Today (Solcast)",
+          "pv_forecast_tomorrow_sensor": "PV-Prognose Morgen / PV Forecast Tomorrow (Solcast)",
+          "force_export_boolean": "Force-Export aktiv / Force Export Active (input_boolean or switch)",
+          "force_export_power": "Force-Export Leistung / Force Export Power (number)",
+          "history_weeks": "Datenzeitraum / History Period (0 = unbegrenzt / unlimited)",
+          "pv_forecast_day_after_tomorrow_sensor": "PV-Prognose Übermorgen / PV Forecast Day after Tomorrow (Solcast)",
+          "hauslast_aktuell_sensor": "Hauslast aktuell / House Load Current (Sensor in W)"
+        },
+        "data_description": {
+          "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh / Total battery capacity in kWh",
+          "bat_soc_sensor": "Aktueller Ladestand in Prozent / Current state of charge in percent",
+          "bat_cutoff_sensor": "Mindest-Ladestand in Prozent / Minimum charge level in percent",
+          "pv_forecast_today_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
+          "pv_forecast_tomorrow_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
+          "force_export_boolean": "Optional – input_boolean oder switch der senalse-Integration",
+          "force_export_power": "Optional – leer lassen wenn nicht vorhanden / leave empty if not available",
+          "history_weeks": "Anzahl Wochen für historische Berechnung. 0 = alle Daten / Number of weeks for historical calculation. 0 = all data. Default: 8",
+          "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now",
+          "hauslast_aktuell_sensor": "Leistungssensor in Watt – die Integration erstellt daraus automatisch den Verbrauchszähler sensor.hlf_hauslast_stundlich"
+        }
+      },
+      "fallback_wt": {
+        "title": "Wochentag – Fallback-Profil / Weekday – Fallback Profile",
+        "description": "Stundenprofile in Watt für Werktage (Mo–Fr).\nHourly profiles in watts for weekdays (Mon–Fri).",
+        "data": {
+          "fallback_wt_00": "00:00 Uhr",
+          "fallback_wt_01": "01:00 Uhr",
+          "fallback_wt_02": "02:00 Uhr",
+          "fallback_wt_03": "03:00 Uhr",
+          "fallback_wt_04": "04:00 Uhr",
+          "fallback_wt_05": "05:00 Uhr",
+          "fallback_wt_06": "06:00 Uhr",
+          "fallback_wt_07": "07:00 Uhr",
+          "fallback_wt_08": "08:00 Uhr",
+          "fallback_wt_09": "09:00 Uhr",
+          "fallback_wt_10": "10:00 Uhr",
+          "fallback_wt_11": "11:00 Uhr",
+          "fallback_wt_12": "12:00 Uhr",
+          "fallback_wt_13": "13:00 Uhr",
+          "fallback_wt_14": "14:00 Uhr",
+          "fallback_wt_15": "15:00 Uhr",
+          "fallback_wt_16": "16:00 Uhr",
+          "fallback_wt_17": "17:00 Uhr",
+          "fallback_wt_18": "18:00 Uhr",
+          "fallback_wt_19": "19:00 Uhr",
+          "fallback_wt_20": "20:00 Uhr",
+          "fallback_wt_21": "21:00 Uhr",
+          "fallback_wt_22": "22:00 Uhr",
+          "fallback_wt_23": "23:00 Uhr"
+        },
+        "data_description": {}
+      },
+      "fallback_we": {
+        "title": "Wochenende – Fallback-Profil / Weekend – Fallback Profile",
+        "description": "Stundenprofile in Watt für Wochenenden (Sa+So).\nHourly profiles in watts for weekends (Sat+Sun).",
+        "data": {
+          "fallback_we_00": "00:00 Uhr",
+          "fallback_we_01": "01:00 Uhr",
+          "fallback_we_02": "02:00 Uhr",
+          "fallback_we_03": "03:00 Uhr",
+          "fallback_we_04": "04:00 Uhr",
+          "fallback_we_05": "05:00 Uhr",
+          "fallback_we_06": "06:00 Uhr",
+          "fallback_we_07": "07:00 Uhr",
+          "fallback_we_08": "08:00 Uhr",
+          "fallback_we_09": "09:00 Uhr",
+          "fallback_we_10": "10:00 Uhr",
+          "fallback_we_11": "11:00 Uhr",
+          "fallback_we_12": "12:00 Uhr",
+          "fallback_we_13": "13:00 Uhr",
+          "fallback_we_14": "14:00 Uhr",
+          "fallback_we_15": "15:00 Uhr",
+          "fallback_we_16": "16:00 Uhr",
+          "fallback_we_17": "17:00 Uhr",
+          "fallback_we_18": "18:00 Uhr",
+          "fallback_we_19": "19:00 Uhr",
+          "fallback_we_20": "20:00 Uhr",
+          "fallback_we_21": "21:00 Uhr",
+          "fallback_we_22": "22:00 Uhr",
+          "fallback_we_23": "23:00 Uhr"
+        },
+        "data_description": {}
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "forecast_today": {
+        "name": "Hauslast-Prognose Heute"
+      },
+      "forecast_tomorrow": {
+        "name": "Hauslast-Prognose Morgen"
+      },
+      "battery_runtime": {
+        "name": "PV Akku Restlaufzeit"
+      },
+      "fallback_weekday": {
+        "name": "Hauslast Fallback Wochentag"
+      },
+      "fallback_weekend": {
+        "name": "Hauslast Fallback Wochenende"
+      },
+      "diag_calculation_timestamp": {
+        "name": "Letzte Aktualisierung"
+      },
+      "diag_data_days": {
+        "name": "Anzahl Tage Datenbasis"
+      },
+      "diag_soc_pct_raw": {
+        "name": "Batterieladezustand"
+      },
+      "diag_bat_max_kwh": {
+        "name": "Effektive Batteriekapazität"
+      },
+      "diag_bat_kwh": {
+        "name": "Nutzbare Kapazität"
+      },
+      "diag_bat_rest_kwh": {
+        "name": "Restkapazität bis CutOff"
+      },
+      "diag_force_on": {
+        "name": "Force-Export aktiv"
+      },
+      "diag_battery_empty_at": {
+        "name": "Akku leer um"
+      },
+      "forecast_day_after_tomorrow": {
+        "name": "Hauslast-Prognose Übermorgen"
+      }
+    }
+  }
+}
