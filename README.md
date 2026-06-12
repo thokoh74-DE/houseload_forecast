@@ -366,7 +366,7 @@ Zeigt die stündliche Prognose für heute (blau), morgen (orange) und übermorge
 - **Heute (blau):** Alle 24 Stunden des heutigen Tages aus `sensor.hlf_forecast_today`
 - **Morgen (orange):** Alle 24 Stunden des morgigen Tages aus `sensor.hlf_forecast_tomorrow`
 - **Übermorgen (lachs):** Stunden des übernächsten Tages aus `sensor.hlf_forecast_day_after_tomorrow`
-- **Ist-Verbrauch (rot):** Tatsächlicher stündlicher Verbrauch aus `sensor.hauslast_stundlich`
+- **Ist-Verbrauch (rot):** Tatsächlicher stündlicher Verbrauch aus `sensor.hlf_hauslast_stundlich` (intern von der Integration erzeugt)
 
 ![Hauslast-Prognose Dashboard](docs/images/screenshot_hauslast_prognose.png)
 
@@ -503,7 +503,7 @@ series:
     show:
       in_chart: false
       in_header: true
-  - entity: sensor.hauslast_taglich
+  - entity: sensor.hlf_hauslast_taglich
     name: Ist-Verbrauch
     color: "#ff4444"
     unit: kWh
@@ -511,7 +511,7 @@ series:
     show:
       in_chart: false
       in_header: true
-  - entity: sensor.hauslast_stundlich
+  - entity: sensor.hlf_hauslast_stundlich
     name: Ist-Verbrauch
     type: column
     color: "#ff4444"
@@ -521,9 +521,8 @@ series:
       legend_value: false
       in_header: false
     group_by:
-      func: last
+      func: diff
       duration: 1h
-    extend_to: now
 grid_options:
   columns: full
 card_mod:
@@ -534,7 +533,7 @@ card_mod:
     }
 ```
 
-> **Hinweis:** `sensor.hauslast_taglich` und `sensor.hauslast_stundlich` durch deine eigenen Sensor-Namen ersetzen. Den `max`-Wert der Y-Achse (`3`) ggf. an deinen typischen Verbrauch anpassen.
+> **Hinweis:** Den `max`-Wert der Y-Achse (`3`) ggf. an deinen typischen stündlichen Verbrauch anpassen.
 
 </details>
 ---

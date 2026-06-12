@@ -15,7 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
@@ -39,6 +39,7 @@ from .const import (
     FALLBACK_WT_KEYS,
     FALLBACK_WE_KEYS,
     GENERATED_HAUSLAST_SENSOR_ID,
+    GENERATED_HAUSLAST_DAILY_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -118,9 +119,11 @@ async def async_setup_entry(
 
     # NEU v1.1.2: Verbrauchszähler-Sensor (aus aktueller Leistung abgeleitet)
     hauslast_stundlich_sensor = HauslastStundlichSensor(entry)
+    hauslast_taeglich_sensor = HauslastTaeglichSensor(entry)
 
     sensors = [
         hauslast_stundlich_sensor,
+        hauslast_taeglich_sensor,
         HauslastFallbackSensor(coordinator, "wochentag", entry),
         HauslastFallbackSensor(coordinator, "wochenende", entry),
         HauslastPrognoseHeuteSensor(coordinator, entry),
@@ -162,20 +165,42 @@ async def async_setup_entry(
     ]
     watch_forecast = [e for e in watch_forecast if e]
 
+    # Debounce: Forecast-Neuberechnung max. alle 5 s nach letztem State-Change
+    # Verhindert vielfachen _compute()-Aufruf wenn AlphaESS mehrere Sensoren
+    # gleichzeitig aktualisiert.
+    _debounce_handle: list = [None]
+
     @callback
     def _state_changed(event):
+        if _debounce_handle[0] is not None:
+            _debounce_handle[0].cancel()
+        _debounce_handle[0] = hass.loop.call_later(5.0, _trigger_refresh)
+
+    def _trigger_refresh():
+        _debounce_handle[0] = None
         coordinator.async_update_all()
 
     entry.async_on_unload(
         async_track_state_change_event(hass, watch_forecast, _state_changed)
     )
 
-    # Leistungssensor → Verbrauchszähler akkumulieren
+    # 30-Sekunden-Interval: Prognose und Restlaufzeit werden regelmaessig
+    # aktualisiert, auch ohne eingehende State-Changes (z.B. nachts)
+    entry.async_on_unload(
+        async_track_time_interval(
+            hass,
+            lambda _: coordinator.async_update_all(),
+            timedelta(seconds=30),
+        )
+    )
+
+    # Leistungssensor -> Verbrauchszaehler akkumulieren (event-getrieben, kein Debounce)
     aktuell_entity = cfg.get(CONF_HAUSLAST_AKTUELL)
     if aktuell_entity:
         @callback
         def _aktuell_changed(event):
             hauslast_stundlich_sensor.handle_power_update(hass, aktuell_entity)
+            hauslast_taeglich_sensor.handle_power_update(hass, aktuell_entity)
 
         entry.async_on_unload(
             async_track_state_change_event(hass, [aktuell_entity], _aktuell_changed)
@@ -1097,7 +1122,12 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
 
     @property
     def native_value(self) -> float:
-        return round(self._total_kwh, 4)
+        """State = Verbrauch der aktuell laufenden Stunde (current_hour_kwh).
+        Der absolute Zählerstand ist im Attribut 'total_kwh' abrufbar.
+        """
+        if self._hour_start_kwh is not None:
+            return round(self._total_kwh - self._hour_start_kwh, 4)
+        return 0.0
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -1109,6 +1139,7 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
             "hourly_history": self._hourly_history[-24:],
             "current_hour_kwh": current_hour_kwh,
             "last_period": last_period,
+            "total_kwh": round(self._total_kwh, 4),
         }
 
     async def async_added_to_hass(self) -> None:
@@ -1190,6 +1221,141 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
             try:
                 power_w = float(state.state)
                 self._last_power_w = max(power_w, 0.0)  # negative Werte ignorieren
+            except (ValueError, TypeError):
+                self._last_power_w = None
+        else:
+            self._last_power_w = None
+
+        self._last_update = now
+        self.async_write_ha_state()
+
+
+# ── HauslastTaeglichSensor ─────────────────────────────────────────────────────
+# NEU v1.1.2: Täglicher Verbrauchszähler – wird parallel zum stündlichen Sensor
+# aus demselben Leistungssensor akkumuliert. State = Verbrauch des laufenden Tages
+# (kWh). TOTAL_INCREASING für den HA-Recorder, tägliche Differenzen im Dashboard.
+
+class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
+    """Täglicher Hauslast-Verbrauchszähler (kWh, stetig steigend, TOTAL_INCREASING).
+
+    State = Verbrauch des aktuell laufenden Tages (ab 00:00 Uhr).
+    Der absolute Gesamtzähler ist im Attribut 'total_kwh' verfügbar.
+    entity_id ist fix: sensor.hlf_hauslast_taglich.
+    """
+
+    _attr_has_entity_name = False
+    _attr_name = "Hauslast täglich"
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_icon = "mdi:home-lightning-bolt-outline"
+    _attr_should_poll = False
+
+    def __init__(self, entry: ConfigEntry) -> None:
+        self._entry = entry
+        self._attr_unique_id = f"{DOMAIN}_hauslast_taeglich_{entry.entry_id}"
+        self.entity_id = GENERATED_HAUSLAST_DAILY_ID
+        self._total_kwh: float = 0.0
+        self._last_update: datetime | None = None
+        self._last_power_w: float | None = None
+        # Zählerstand zu Beginn des aktuellen Tages
+        self._day_start_kwh: float | None = None
+        self._day_start_ts: datetime | None = None
+        # Verlauf der letzten 14 abgeschlossenen Tage
+        self._daily_history: list[dict] = []
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, self._entry.entry_id)},
+            "name": "House Load Forecast",
+            "manufacturer": "Custom",
+            "model": "House Load Forecast & PV Battery Runtime",
+        }
+
+    @property
+    def native_value(self) -> float:
+        """State = Verbrauch des aktuell laufenden Tages (ab 00:00 Uhr)."""
+        if self._day_start_kwh is not None:
+            return round(self._total_kwh - self._day_start_kwh, 4)
+        return 0.0
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        today_kwh = None
+        if self._day_start_kwh is not None:
+            today_kwh = round(self._total_kwh - self._day_start_kwh, 4)
+        yesterday_kwh = self._daily_history[-1]["kwh"] if self._daily_history else None
+        return {
+            "daily_history": self._daily_history[-14:],
+            "today_kwh": today_kwh,
+            "yesterday_kwh": yesterday_kwh,
+            "total_kwh": round(self._total_kwh, 4),
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Letzten gespeicherten Zählerstand wiederherstellen."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.state not in ("unknown", "unavailable", None):
+            try:
+                # State war der Tagesverbrauch, nicht der Gesamtzähler →
+                # total_kwh aus Attribut laden
+                attrs = last_state.attributes or {}
+                if "total_kwh" in attrs:
+                    self._total_kwh = float(attrs["total_kwh"])
+                if "daily_history" in attrs and isinstance(attrs["daily_history"], list):
+                    self._daily_history = attrs["daily_history"][-14:]
+                _LOGGER.debug(
+                    "HauslastTaeglichSensor: Zählerstand wiederhergestellt: %.4f kWh",
+                    self._total_kwh,
+                )
+            except (ValueError, TypeError):
+                self._total_kwh = 0.0
+        self.async_write_ha_state()
+
+    def _maybe_close_day(self, now: datetime) -> None:
+        """Prüft ob ein neuer Tag begonnen hat und schließt den alten ab."""
+        if self._day_start_ts is None:
+            self._day_start_kwh = self._total_kwh
+            self._day_start_ts = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            return
+
+        current_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        if current_day > self._day_start_ts:
+            kwh_today = round(self._total_kwh - self._day_start_kwh, 4)
+            if kwh_today >= 0:
+                self._daily_history.append({
+                    "day": self._day_start_ts.strftime("%Y-%m-%d"),
+                    "kwh": kwh_today,
+                })
+                if len(self._daily_history) > 14:
+                    self._daily_history = self._daily_history[-14:]
+                _LOGGER.debug(
+                    "HauslastTaeglichSensor: Tag %s abgeschlossen → %.4f kWh",
+                    self._day_start_ts.strftime("%Y-%m-%d"), kwh_today,
+                )
+            self._day_start_kwh = self._total_kwh
+            self._day_start_ts = current_day
+
+    @callback
+    def handle_power_update(self, hass, power_entity_id: str) -> None:
+        """Leistungswert (W) auslesen und Tageszähler akkumulieren (Riemann links)."""
+        now = dt_util.now()
+
+        if self._last_update is not None and self._last_power_w is not None:
+            delta_h = (now - self._last_update).total_seconds() / 3600.0
+            if 0 < delta_h <= 2.0:
+                delta_kwh = self._last_power_w * delta_h / 1000.0
+                if delta_kwh > 0:
+                    self._total_kwh += delta_kwh
+
+        self._maybe_close_day(now)
+
+        state = hass.states.get(power_entity_id)
+        if state and state.state not in ("unknown", "unavailable", ""):
+            try:
+                self._last_power_w = max(float(state.state), 0.0)
             except (ValueError, TypeError):
                 self._last_power_w = None
         else:

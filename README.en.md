@@ -366,7 +366,7 @@ Shows the hourly forecast for today (blue), tomorrow (orange) and the day after 
 - **Today (blue):** All 24 hours of today from `sensor.hlf_forecast_today`
 - **Tomorrow (orange):** All 24 hours of tomorrow from `sensor.hlf_forecast_tomorrow`
 - **Day after tomorrow (salmon):** Hours from `sensor.hlf_forecast_day_after_tomorrow`
-- **Actual consumption (red):** Real hourly consumption from `sensor.hauslast_stundlich`
+- **Actual consumption (red):** Real hourly consumption from `sensor.hlf_hauslast_stundlich` (generated internally by the integration)
 
 ![House Load Forecast Dashboard](docs/images/screenshot_houseload_forecast.png)
 
@@ -503,7 +503,7 @@ series:
     show:
       in_chart: false
       in_header: true
-  - entity: sensor.hauslast_taglich
+  - entity: sensor.hlf_hauslast_taglich
     name: Actual consumption
     color: "#ff4444"
     unit: kWh
@@ -511,7 +511,7 @@ series:
     show:
       in_chart: false
       in_header: true
-  - entity: sensor.hauslast_stundlich
+  - entity: sensor.hlf_hauslast_stundlich
     name: Actual consumption
     type: column
     color: "#ff4444"
@@ -521,9 +521,8 @@ series:
       legend_value: false
       in_header: false
     group_by:
-      func: last
+      func: diff
       duration: 1h
-    extend_to: now
 grid_options:
   columns: full
 card_mod:
@@ -534,7 +533,7 @@ card_mod:
     }
 ```
 
-> **Note:** Replace `sensor.hauslast_taglich` and `sensor.hauslast_stundlich` with your own sensor names. Adjust the `max` Y-axis value (`3`) to match your typical consumption.
+> **Note:** Adjust the `max` Y-axis value (`3`) to match your typical hourly consumption.
 
 </details>
 ---

@@ -37,3 +37,4 @@ FALLBACK_WE_KEYS = [f"fallback_we_{h:02d}" for h in range(24)]
 
 # Interne Entity-ID des von der Integration erzeugten stündlichen Verbrauchszählers
 GENERATED_HAUSLAST_SENSOR_ID = "sensor.hlf_hauslast_stundlich"
+GENERATED_HAUSLAST_DAILY_ID   = "sensor.hlf_hauslast_taglich"
