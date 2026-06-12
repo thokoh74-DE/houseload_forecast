@@ -382,18 +382,20 @@ class HauslastCoordinator:
                     value_col = "mean (W)"
                     scale = 1.0
                 else:
+                    # TOTAL_INCREASING-Zähler: stündliche Differenz via LAG(sum)
+                    # sum[h] - sum[h-1] = Verbrauch der Stunde h in kWh → *1000 → W
                     raw_sql = """
                         SELECT
                             CAST(strftime('%w', datetime(start_ts,'unixepoch','localtime')) AS INTEGER) AS sqlite_dow,
                             CAST(strftime('%H', datetime(start_ts,'unixepoch','localtime')) AS INTEGER) AS hour,
-                            state AS val
+                            (sum - LAG(sum) OVER (ORDER BY start_ts)) AS val
                         FROM statistics
                         WHERE metadata_id = (SELECT id FROM statistics_meta WHERE statistic_id = ?)
                           AND start_ts >= strftime('%s', datetime('now', ?))
-                          AND state IS NOT NULL AND state > 0
+                          AND sum IS NOT NULL
                         ORDER BY start_ts
                     """
-                    value_col = "state (kWh→W)"
+                    value_col = "sum-diff (kWh→W)"
                     scale = 1000.0
 
                 cur.execute(raw_sql, (statistic_id, history_param))
@@ -402,9 +404,12 @@ class HauslastCoordinator:
                 buckets: list[list[list[float]]] = [[[] for _ in range(24)] for _ in range(7)]
                 for sqlite_dow, hour, val in all_rows:
                     if val is None or val < 0:
-                        continue
+                        continue  # NULL (LAG erste Zeile) oder Zähler-Reset verwerfen
+                    scaled = float(val) * scale
+                    if scaled > 20000:
+                        continue  # Ausreißer > 20 kW Durchschnitt ignorieren
                     py_wd = _SQLITE_DOW_TO_PY[int(sqlite_dow)]
-                    buckets[py_wd][hour].append(float(val) * scale)
+                    buckets[py_wd][hour].append(scaled)
 
                 def iqr_filtered_mean(values: list[float], fallback: float) -> float:
                     if not values:
@@ -1050,6 +1055,11 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
     Riemann-Integral und liefert einen HA-Recorder-kompatiblen
     TOTAL_INCREASING-Sensor für die historische Profilberechnung.
     Die entity_id ist fix: sensor.hlf_hauslast_stundlich.
+
+    Attribute:
+        hourly_history: Liste der letzten 48 abgeschlossenen Stunden als
+            [{"hour": "2026-06-12T14:00:00+02:00", "kwh": 0.432}, ...]
+        current_hour_kwh: Verbrauch der aktuell laufenden Stunde (noch nicht abgeschlossen)
     """
 
     _attr_has_entity_name = False
@@ -1060,6 +1070,9 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
     _attr_icon = "mdi:home-lightning-bolt"
     _attr_should_poll = False
 
+    # Anzahl abgeschlossener Stunden die in den Attributen gehalten werden
+    HISTORY_HOURS = 48
+
     def __init__(self, entry: ConfigEntry) -> None:
         self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_hauslast_stundlich_{entry.entry_id}"
@@ -1067,6 +1080,11 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
         self._total_kwh: float = 0.0
         self._last_update: datetime | None = None
         self._last_power_w: float | None = None
+        # Zählerstand zu Beginn der aktuellen Stunde
+        self._hour_start_kwh: float | None = None
+        self._hour_start_ts: datetime | None = None
+        # Ringpuffer: abgeschlossene Stunden {"hour": iso-str, "kwh": float}
+        self._hourly_history: list[dict] = []
 
     @property
     def device_info(self):
@@ -1081,6 +1099,16 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
     def native_value(self) -> float:
         return round(self._total_kwh, 4)
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        current_hour_kwh = None
+        if self._hour_start_kwh is not None:
+            current_hour_kwh = round(self._total_kwh - self._hour_start_kwh, 4)
+        return {
+            "hourly_history": self._hourly_history,
+            "current_hour_kwh": current_hour_kwh,
+        }
+
     async def async_added_to_hass(self) -> None:
         """Letzten gespeicherten Zählerstand wiederherstellen."""
         await super().async_added_to_hass()
@@ -1094,7 +1122,40 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
                 )
             except (ValueError, TypeError):
                 self._total_kwh = 0.0
+            # Stunden-History aus Attributen wiederherstellen
+            attrs = last_state.attributes or {}
+            if "hourly_history" in attrs and isinstance(attrs["hourly_history"], list):
+                self._hourly_history = attrs["hourly_history"][-self.HISTORY_HOURS:]
         self.async_write_ha_state()
+
+    def _maybe_close_hour(self, now: datetime) -> None:
+        """Prüft ob eine neue Stunde begonnen hat und schließt die alte ab."""
+        if self._hour_start_ts is None:
+            # Erste Initialisierung: aktuelle Stunde merken
+            self._hour_start_kwh = self._total_kwh
+            self._hour_start_ts = now.replace(minute=0, second=0, microsecond=0)
+            return
+
+        current_hour = now.replace(minute=0, second=0, microsecond=0)
+        if current_hour > self._hour_start_ts:
+            # Neue Stunde → abgeschlossene Stunde in History eintragen
+            kwh_this_hour = round(self._total_kwh - self._hour_start_kwh, 4)
+            if kwh_this_hour >= 0:
+                entry = {
+                    "hour": self._hour_start_ts.isoformat(),
+                    "kwh": kwh_this_hour,
+                }
+                self._hourly_history.append(entry)
+                # Ringpuffer begrenzen
+                if len(self._hourly_history) > self.HISTORY_HOURS:
+                    self._hourly_history = self._hourly_history[-self.HISTORY_HOURS:]
+                _LOGGER.debug(
+                    "HauslastStundlichSensor: Stunde %s abgeschlossen → %.4f kWh",
+                    self._hour_start_ts.isoformat(), kwh_this_hour,
+                )
+            # Neue Stunde starten
+            self._hour_start_kwh = self._total_kwh
+            self._hour_start_ts = current_hour
 
     @callback
     def handle_power_update(self, hass, power_entity_id: str) -> None:
@@ -1117,6 +1178,9 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
                         "HauslastStundlichSensor: +%.4f kWh (P=%.1f W, Δt=%.2f h) → Gesamt: %.4f kWh",
                         delta_kwh, self._last_power_w, delta_h, self._total_kwh,
                     )
+
+        # Stundenwechsel prüfen und ggf. abgeschlossene Stunde in History schreiben
+        self._maybe_close_hour(now)
 
         # Neuen Leistungswert merken
         state = hass.states.get(power_entity_id)
