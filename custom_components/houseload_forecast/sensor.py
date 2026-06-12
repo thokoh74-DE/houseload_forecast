@@ -257,13 +257,13 @@ class HauslastCoordinator:
 
         self._has_valid_data: bool = False
 
-        # Persistente Cache-Dateien: SOC- und Hauslast-Vergangenheitswerte
-        # werden beim Start aus Datei geladen → überleben HA-Neustarts
-        self._frozen_past_slots: list[dict] = self._load_cache(_CACHE_SOC, [])
+        # Cache wird beim ersten _compute()-Aufruf im Executor geladen.
+        # __init__ laeuft im Event Loop und darf kein blockierendes I/O machen.
+        self._frozen_past_slots: list[dict] = []
         self._frozen_past_date: str = dt_util.now().strftime("%Y-%m-%d")
-
-        self._frozen_hl_past_slots: dict[str, float] = self._load_cache(_CACHE_HL, {})
+        self._frozen_hl_past_slots: dict[str, float] = {}
         self._frozen_hl_past_date: str = dt_util.now().strftime("%Y-%m-%d")
+        self._cache_loaded: bool = False
 
     def async_register_entities(self, entities):
         self._entities = entities
@@ -297,9 +297,12 @@ class HauslastCoordinator:
         except Exception as exc:
             _LOGGER.debug("Cache-Datei konnte nicht gespeichert werden (%s): %s", path, exc)
 
-    @callback
     def async_update_all(self):
-        self.hass.async_create_task(self.async_refresh())
+        # Thread-safe: call_soon_threadsafe stellt sicher dass async_create_task
+        # immer aus dem Event Loop aufgerufen wird, unabhaengig vom Aufrufer-Kontext.
+        self.hass.loop.call_soon_threadsafe(
+            lambda: self.hass.async_create_task(self.async_refresh())
+        )
 
     async def async_refresh(self):
         await self.hass.async_add_executor_job(self._compute)
@@ -332,6 +335,12 @@ class HauslastCoordinator:
 
     def _compute(self):
         import sqlite3
+
+        # Cache einmalig beim ersten Executor-Aufruf laden (I/O hier erlaubt)
+        if not self._cache_loaded:
+            self._frozen_past_slots = self._load_cache(_CACHE_SOC, [])
+            self._frozen_hl_past_slots = self._load_cache(_CACHE_HL, {})
+            self._cache_loaded = True
 
         self.calculation_timestamp = dt_util.now().strftime("%Y-%m-%d %H:%M:%S")
 
