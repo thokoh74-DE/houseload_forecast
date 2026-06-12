@@ -1071,7 +1071,7 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
     _attr_should_poll = False
 
     # Anzahl abgeschlossener Stunden die in den Attributen gehalten werden
-    HISTORY_HOURS = 48
+    HISTORY_HOURS = 24
 
     def __init__(self, entry: ConfigEntry) -> None:
         self._entry = entry
@@ -1104,9 +1104,11 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
         current_hour_kwh = None
         if self._hour_start_kwh is not None:
             current_hour_kwh = round(self._total_kwh - self._hour_start_kwh, 4)
+        last_period = self._hourly_history[-1]["kwh"] if self._hourly_history else None
         return {
-            "hourly_history": self._hourly_history,
+            "hourly_history": self._hourly_history[-24:],
             "current_hour_kwh": current_hour_kwh,
+            "last_period": last_period,
         }
 
     async def async_added_to_hass(self) -> None:
