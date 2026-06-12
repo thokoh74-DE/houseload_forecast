@@ -13,7 +13,7 @@ A Home Assistant custom integration for **hourly house load forecasting** and **
 
 ## Feature Overview
 
-- **House Load Forecast (Today & Tomorrow):** Hourly forecast of household consumption in kWh, built from historical data of the last *n* weeks
+- **House Load Forecast (Today, Tomorrow & Day After Tomorrow):** Hourly forecast of household consumption in kWh for 72 hours, built from historical data of the last *n* weeks
 - **7 Individual Daily Profiles:** Each weekday (Monday to Sunday) gets its own 24-hour profile — no more generic weekday/weekend grouping
 - **IQR Outlier Filter:** Measurement artifacts and counter resets are automatically filtered out
 - **Configurable Time Range:** From 1 week to unlimited (0 = entire data history)
@@ -70,7 +70,7 @@ A Home Assistant custom integration for **hourly house load forecasting** and **
 | PV forecast day after tomorrow | Optional: Solcast sensor for the day after tomorrow — required for a true 48h forecast from now |
 | Force export active | Optional: `input_boolean` for force export mode |
 | Force export power | Optional: `number` entity with export power in kW |
-| House load hourly | Hourly consumption sensor recorded in HA statistics |
+| House load current | Power sensor in W (e.g. `sensor.alphaess_inverter_current_house_load`) – the integration automatically creates `sensor.hlf_hauslast_stundlich` and `sensor.hlf_hauslast_taglich` from this |
 | History period | Number of weeks for historical calculation (0 = all data) |
 
 4. **Step 2 – Fallback profiles:** Manual hourly profiles in watts for weekdays (Mon–Fri) and weekends (Sat+Sun) — automatically replaced by historical data once ≥ 10 days are available
@@ -96,6 +96,8 @@ Via **Settings → Devices & Services → Hauslast Prognose → Configure**:
 | `sensor.hlf_forecast_tomorrow` | kWh | Daily house load forecast for tomorrow (House Load Forecast Tomorrow) |
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Daily house load forecast for the day after tomorrow (House Load Forecast Day After Tomorrow) |
 | `sensor.hlf_battery_runtime` | min | Remaining time until discharge cutoff (PV Battery Runtime Forecast). The forecast covers **48 hours from now** (today + tomorrow + day after tomorrow). A value of **2880 min means the battery will not run empty within the next 48 hours** based on the current forecast. |
+| `sensor.hlf_hauslast_stundlich` | kWh | Consumption of the current running hour (state) and hourly consumption counter for the recorder (TOTAL_INCREASING). Automatically calculated from the configured power sensor. Attributes: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (last 24 h) |
+| `sensor.hlf_hauslast_taglich` | kWh | Consumption of the current running day (state) and daily consumption counter for the recorder (TOTAL_INCREASING). Attributes: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (last 14 days) |
 
 ### Key Attributes
 

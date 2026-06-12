@@ -13,7 +13,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 
 ## Funktionsübersicht
 
-- **Hauslast-Prognose (Heute & Morgen):** Stündliche Prognose des Haushaltsverbrauchs in kWh, aufgebaut aus den historischen Verbrauchsdaten der letzten *n* Wochen
+- **Hauslast-Prognose (Heute, Morgen & Übermorgen):** Stündliche Prognose des Haushaltsverbrauchs in kWh für 72 Stunden, aufgebaut aus den historischen Verbrauchsdaten der letzten *n* Wochen
 - **7 individuelle Tagesprofile:** Jeder Wochentag (Montag bis Sonntag) bekommt ein eigenes 24-Stunden-Profil – kein pauschales Wochentag/Wochenende mehr
 - **IQR-Ausreißerfilter:** Messartefakte und Zählerresets werden automatisch herausgefiltert
 - **Konfigurierbarer Datenzeitraum:** Von 1 Woche bis unbegrenzt (0 = gesamte Datenbasis)
@@ -70,7 +70,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | PV-Prognose Übermorgen | Optional: Solcast-Sensor für übermorgen – wird für eine echte 48h-Prognose ab jetzt benötigt |
 | Force Export Active | Optional: `input_boolean` für Force-Export-Modus |
 | Force-Export Leistung | Optional: `number`-Entität mit der Export-Leistung in kW |
-| Hauslast stündlich | Stündlicher Verbrauchssensor, der in der HA-Statistik erfasst ist |
+| Hauslast aktuell | Leistungssensor in W (z. B. `sensor.alphaess_inverter_current_house_load`) – die Integration erzeugt daraus automatisch `sensor.hlf_hauslast_stundlich` und `sensor.hlf_hauslast_taglich` |
 | Datenzeitraum | Anzahl Wochen für die historische Berechnung (0 = alles) |
 
 4. **Schritt 2 – Fallback-Profile:** Manuelle Stundenprofile in Watt für Werktage (Mo–Fr) und Wochenende (Sa+So) – werden automatisch durch historische Daten ersetzt, sobald ≥ 10 Datentage vorhanden sind
@@ -96,6 +96,8 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | `sensor.hlf_forecast_tomorrow` | kWh | Tagesprognose Hauslast für morgen (House Load Forecast Tomorrow) |
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Tagesprognose Hauslast für übermorgen (House Load Forecast Day After Tomorrow) |
 | `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **48 Stunden ab jetzt** (heute + morgen + übermorgen). Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
+| `sensor.hlf_hauslast_stundlich` | kWh | Verbrauch der aktuell laufenden Stunde (State) sowie stündlicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Aus dem konfigurierten Leistungssensor automatisch berechnet. Attribute: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (letzte 24 h) |
+| `sensor.hlf_hauslast_taglich` | kWh | Verbrauch des aktuell laufenden Tages (State) sowie täglicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Attribute: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (letzte 14 Tage) |
 
 ### Wichtige Attribute
 
