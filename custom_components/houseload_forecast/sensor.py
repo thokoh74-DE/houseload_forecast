@@ -1157,17 +1157,27 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
         last_state = await self.async_get_last_state()
         if last_state and last_state.state not in ("unknown", "unavailable", None):
             try:
-                self._total_kwh = float(last_state.state)
+                attrs = last_state.attributes or {}
+                # total_kwh aus Attribut laden (State = current_hour_kwh, nicht total)
+                if "total_kwh" in attrs:
+                    self._total_kwh = float(attrs["total_kwh"])
+                # Startwert der laufenden Stunde rekonstruieren:
+                # hour_start_kwh = total_kwh - current_hour_kwh
+                if "current_hour_kwh" in attrs and attrs["current_hour_kwh"] is not None:
+                    current_hour_kwh = float(attrs["current_hour_kwh"])
+                    self._hour_start_kwh = self._total_kwh - current_hour_kwh
+                    now = dt_util.now()
+                    self._hour_start_ts = now.replace(minute=0, second=0, microsecond=0)
+                # Stunden-History wiederherstellen
+                if "hourly_history" in attrs and isinstance(attrs["hourly_history"], list):
+                    self._hourly_history = attrs["hourly_history"][-self.HISTORY_HOURS:]
                 _LOGGER.debug(
-                    "HauslastStundlichSensor: Zählerstand nach Neustart wiederhergestellt: %.4f kWh",
-                    self._total_kwh,
+                    "HauslastStundlichSensor: Neustart – total=%.4f kWh, hour_start=%.4f kWh",
+                    self._total_kwh, self._hour_start_kwh or 0.0,
                 )
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as exc:
+                _LOGGER.warning("HauslastStundlichSensor: Restore fehlgeschlagen: %s", exc)
                 self._total_kwh = 0.0
-            # Stunden-History aus Attributen wiederherstellen
-            attrs = last_state.attributes or {}
-            if "hourly_history" in attrs and isinstance(attrs["hourly_history"], list):
-                self._hourly_history = attrs["hourly_history"][-self.HISTORY_HOURS:]
         self.async_write_ha_state()
 
     def _maybe_close_hour(self, now: datetime) -> None:
@@ -1308,18 +1318,26 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
         last_state = await self.async_get_last_state()
         if last_state and last_state.state not in ("unknown", "unavailable", None):
             try:
-                # State war der Tagesverbrauch, nicht der Gesamtzähler →
-                # total_kwh aus Attribut laden
                 attrs = last_state.attributes or {}
+                # total_kwh aus Attribut laden (State = today_kwh, nicht total)
                 if "total_kwh" in attrs:
                     self._total_kwh = float(attrs["total_kwh"])
+                # Startwert des laufenden Tages rekonstruieren:
+                # day_start_kwh = total_kwh - today_kwh
+                if "today_kwh" in attrs and attrs["today_kwh"] is not None:
+                    today_kwh = float(attrs["today_kwh"])
+                    self._day_start_kwh = self._total_kwh - today_kwh
+                    now = dt_util.now()
+                    self._day_start_ts = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                # Tages-History wiederherstellen
                 if "daily_history" in attrs and isinstance(attrs["daily_history"], list):
                     self._daily_history = attrs["daily_history"][-14:]
                 _LOGGER.debug(
-                    "HauslastTaeglichSensor: Zählerstand wiederhergestellt: %.4f kWh",
-                    self._total_kwh,
+                    "HauslastTaeglichSensor: Neustart – total=%.4f kWh, day_start=%.4f kWh",
+                    self._total_kwh, self._day_start_kwh or 0.0,
                 )
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as exc:
+                _LOGGER.warning("HauslastTaeglichSensor: Restore fehlgeschlagen: %s", exc)
                 self._total_kwh = 0.0
         self.async_write_ha_state()
 
