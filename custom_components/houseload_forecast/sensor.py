@@ -831,7 +831,7 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
         self.entity_id = "sensor.hlf_forecast_today"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = None
-        self._attr_state_class = None
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:home-lightning-bolt"
 
     @property
@@ -892,7 +892,7 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
         self.entity_id = "sensor.hlf_forecast_tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = None
-        self._attr_state_class = None
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:home-lightning-bolt-outline"
 
     @property
@@ -948,7 +948,7 @@ class HauslastPrognoseUebermorgenSensor(_HauslastBaseSensor):
         self.entity_id = "sensor.hlf_forecast_day_after_tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
         self._attr_device_class = None
-        self._attr_state_class = None
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:home-lightning-bolt-outline"
 
     @property
