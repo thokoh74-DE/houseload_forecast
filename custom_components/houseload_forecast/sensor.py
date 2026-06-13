@@ -830,8 +830,8 @@ class HauslastPrognoseHeuteSensor(_HauslastBaseSensor):
         self._translation_key_for_name = "forecast_today"
         self.entity_id = "sensor.hlf_forecast_today"
         self._attr_native_unit_of_measurement = "kWh"
-        self._attr_device_class = SensorDeviceClass.ENERGY
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_device_class = None
+        self._attr_state_class = None
         self._attr_icon = "mdi:home-lightning-bolt"
 
     @property
@@ -891,8 +891,8 @@ class HauslastPrognoseMorgenSensor(_HauslastBaseSensor):
         self._translation_key_for_name = "forecast_tomorrow"
         self.entity_id = "sensor.hlf_forecast_tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
-        self._attr_device_class = SensorDeviceClass.ENERGY
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_device_class = None
+        self._attr_state_class = None
         self._attr_icon = "mdi:home-lightning-bolt-outline"
 
     @property
@@ -947,8 +947,8 @@ class HauslastPrognoseUebermorgenSensor(_HauslastBaseSensor):
         self._translation_key_for_name = "forecast_day_after_tomorrow"
         self.entity_id = "sensor.hlf_forecast_day_after_tomorrow"
         self._attr_native_unit_of_measurement = "kWh"
-        self._attr_device_class = SensorDeviceClass.ENERGY
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_device_class = None
+        self._attr_state_class = None
         self._attr_icon = "mdi:home-lightning-bolt-outline"
 
     @property
@@ -1044,8 +1044,18 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
             "diag_hauslast_slots_morgen": c.hauslast_slots_morgen,
             "diag_hauslast_slots_uebermorgen": c.hauslast_slots_uebermorgen,
             "diag_soc_slots_verarbeitet": c.soc_slots_processed,
-            # soc_hourly_forecast enthält jetzt soc_kwh, soc_pct und is_forecast
+            # soc_hourly_forecast enthält soc_kwh, soc_pct und is_forecast
             "soc_hourly_forecast": c.soc_forecast,
+            # soc_kwh_cutoff: verbleibende nutzbare kWh pro Stunde (soc_kwh - cutoff_kwh)
+            # entspricht dem Wert von sensor.hlf_diag_bat_rest_kwh, aber stündlich aufgelöst
+            "soc_kwh_cutoff": [
+                {
+                    "period_start": e["period_start"],
+                    "kwh": round(max(e["soc_kwh"] - c.cutoff_kwh, 0.0), 3),
+                    "is_forecast": e.get("is_forecast", False),
+                }
+                for e in c.soc_forecast
+            ],
         }
 
     @property
