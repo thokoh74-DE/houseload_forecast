@@ -247,7 +247,10 @@
         "name": "Force Export Active"
       },
       "diag_battery_empty_at": {
-        "name": "Akku leer um"
+        "name": "Battery Empty At"
+      },
+      "diag_forecast_mae_today": {
+        "name": "Forecast MAE Today"
       },
       "forecast_day_after_tomorrow": {
         "name": "House Load Forecast Day After Tomorrow"

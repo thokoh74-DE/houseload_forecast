@@ -249,6 +249,9 @@
       "diag_battery_empty_at": {
         "name": "Akku leer um"
       },
+      "diag_forecast_mae_today": {
+        "name": "Ø Abweichung Prognose Heute"
+      },
       "forecast_day_after_tomorrow": {
         "name": "Hauslast-Prognose Übermorgen"
       }

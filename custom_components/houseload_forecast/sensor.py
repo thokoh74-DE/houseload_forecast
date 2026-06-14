@@ -69,6 +69,7 @@ _SENSOR_NAMES_DE = {
     "diag_bat_rest_kwh":          "Restkapazität bis CutOff",
     "diag_force_on":              "Force-Export aktiv",
     "diag_battery_empty_at":      "Akku leer um",
+    "diag_forecast_mae_today":    "Ø Abweichung Prognose Heute",
 }
 
 _SENSOR_NAMES_EN = {
@@ -86,6 +87,7 @@ _SENSOR_NAMES_EN = {
     "diag_bat_rest_kwh":          "Remaining Capacity to Cutoff",
     "diag_force_on":              "Force Export Active",
     "diag_battery_empty_at":      "Battery Empty At",
+    "diag_forecast_mae_today":    "Forecast MAE Today",
 }
 
 def _get_sensor_name(hass_or_none, translation_key: str) -> str:
@@ -146,6 +148,8 @@ async def async_setup_entry(
                          "Force Export Active", None, None, "mdi:transmission-tower-export"),
         DiagnosticSensor(coordinator, entry, "battery_empty_at",
                          "Battery Empty At", None, None, "mdi:battery-alert"),
+        DiagnosticSensor(coordinator, entry, "forecast_mae_today",
+                         "Forecast MAE Today", "kWh", None, "mdi:chart-bell-curve-cumulative"),
     ]
 
     async_add_entities(sensors, True)
@@ -251,6 +255,7 @@ class HauslastCoordinator:
         self.soc_slots_processed: int = 0
         self.bat_rest_kwh: float = 0.0
         self.cutoff_kwh: float = 0.0
+        self.forecast_mae_today: float = 0.0
 
         # NEU: Zeitpunkt Akku leer (None = reicht durch, False wenn MAX_RUNTIME)
         self.battery_empty_at: str | bool = False
@@ -759,6 +764,26 @@ class HauslastCoordinator:
         if not runtime_found:
             self.restlaufzeit_min = MAX_RUNTIME_MIN
             self.battery_empty_at = False
+
+        # MAE: mittlere absolute Abweichung Prognose vs. Ist-Verbrauch heute
+        try:
+            hl_state = self.hass.states.get("sensor.hlf_hauslast_stundlich")
+            hourly_history = (
+                hl_state.attributes.get("hourly_history", [])
+                if hl_state else []
+            )
+            mae_diffs = []
+            for hist in hourly_history:
+                hist_hour = datetime.fromisoformat(hist["hour"]).hour
+                for fc in self.forecast_heute:
+                    fc_hour = datetime.fromisoformat(fc["period_start"]).hour
+                    if hist_hour == fc_hour:
+                        mae_diffs.append(abs(hist["kwh"] - fc["load_estimate"]))
+                        break
+            self.forecast_mae_today = round(sum(mae_diffs) / len(mae_diffs), 3) if mae_diffs else 0.0
+        except Exception as exc:
+            _LOGGER.debug("MAE-Berechnung fehlgeschlagen: %s", exc)
+            self.forecast_mae_today = 0.0
 
         self._has_valid_data = True
 
