@@ -70,6 +70,8 @@ _SENSOR_NAMES_DE = {
     "diag_force_on":              "Force-Export aktiv",
     "diag_battery_empty_at":      "Akku leer um",
     "diag_forecast_mae_today":    "Ø Abweichung Prognose Heute",
+    "diag_soc_prognose_midnight": "SOC-Prognose um Mitternacht",
+    "diag_soc_aktuell":           "Batterieladezustand (Statistik)",
 }
 
 _SENSOR_NAMES_EN = {
@@ -88,6 +90,8 @@ _SENSOR_NAMES_EN = {
     "diag_force_on":              "Force Export Active",
     "diag_battery_empty_at":      "Battery Empty At",
     "diag_forecast_mae_today":    "Forecast MAE Today",
+    "diag_soc_prognose_midnight": "SOC Forecast at Midnight",
+    "diag_soc_aktuell":           "Battery SOC (Statistics)",
 }
 
 def _get_sensor_name(hass_or_none, translation_key: str) -> str:
@@ -150,6 +154,8 @@ async def async_setup_entry(
                          "Battery Empty At", None, None, "mdi:battery-alert"),
         DiagnosticSensor(coordinator, entry, "forecast_mae_today",
                          "Forecast MAE Today", "kWh", None, "mdi:chart-bell-curve-cumulative"),
+        SocPrognoseAtMidnightSensor(coordinator, entry),
+        SocAktuellStatistikSensor(coordinator, entry),
     ]
 
     async_add_entities(sensors, True)
@@ -1425,3 +1431,135 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
 
         self._last_update = now
         self.async_write_ha_state()
+
+
+# ── SocPrognoseAtMidnightSensor ───────────────────────────────────────────────
+# NEU v1.2.0: Diagnosesensor – speichert den prognostizierten SOC-Wert (%)
+# für den Slot 00:00 Uhr des aktuellen Tages, wie er zum Zeitpunkt des ersten
+# Prognose-Laufs nach Mitternacht berechnet wurde.
+# Einmal täglich eingefroren → erscheint in der HA-Statistik für Vergleich.
+
+class SocPrognoseAtMidnightSensor(_HauslastBaseSensor, RestoreEntity):
+    """SOC-Prognose-Wert für 00:00 Uhr des aktuellen Tages (in %).
+
+    Wird einmalig kurz nach Mitternacht aus soc_forecast gelesen und für den
+    Rest des Tages eingefroren. Dadurch kann er dem tatsächlichen SOC-Verlauf
+    gegenübergestellt werden.
+
+    entity_id: sensor.hlf_diag_soc_prognose_midnight
+    state_class: MEASUREMENT → geht in HA-Statistik
+    """
+
+    _attr_native_unit_of_measurement = "%"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:battery-clock-outline"
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: HauslastCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{DOMAIN}_diag_soc_prognose_midnight_{entry.entry_id}"
+        self._attr_translation_key = "diag_soc_prognose_midnight"
+        self._translation_key_for_name = "diag_soc_prognose_midnight"
+        self.entity_id = "sensor.hlf_diag_soc_prognose_midnight"
+        self._midnight_soc_pct: float | None = None
+        self._midnight_date: str = ""
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.state not in ("unknown", "unavailable", None, ""):
+            try:
+                self._midnight_soc_pct = float(last_state.state)
+                attrs = last_state.attributes or {}
+                self._midnight_date = attrs.get("prognose_datum", "")
+                _LOGGER.debug(
+                    "SocPrognoseAtMidnightSensor: Wiederhergestellt %.1f %% für %s",
+                    self._midnight_soc_pct, self._midnight_date,
+                )
+            except (ValueError, TypeError):
+                self._midnight_soc_pct = None
+        self.async_write_ha_state()
+
+    def _update_midnight_value(self) -> None:
+        """Sucht den 00:00-Slot des heutigen Tages in soc_forecast und friert ihn ein.
+
+        Wird bei jedem native_value-Aufruf geprüft. Einfrierung nur einmal pro Tag.
+        """
+        today_str = dt_util.now().strftime("%Y-%m-%d")
+        if self._midnight_date == today_str and self._midnight_soc_pct is not None:
+            return  # Bereits für heute eingefroren
+
+        midnight_key = f"{today_str}T00:00:00"
+        for slot in self._coordinator.soc_forecast:
+            ps = slot.get("period_start", "")
+            if ps.startswith(midnight_key):
+                self._midnight_soc_pct = slot.get("soc_pct")
+                self._midnight_date = today_str
+                _LOGGER.debug(
+                    "SocPrognoseAtMidnightSensor: Mitternacht-SOC für %s = %.1f %%",
+                    today_str, self._midnight_soc_pct or 0.0,
+                )
+                return
+
+    @property
+    def native_value(self) -> float | None:
+        self._update_midnight_value()
+        return self._midnight_soc_pct
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "prognose_datum": self._midnight_date,
+            "hinweis": (
+                "Prognostizierter Batterieladezustand für 00:00 Uhr des aktuellen Tages, "
+                "wie er kurz nach Mitternacht aus der Simulation berechnet wurde."
+            ),
+        }
+
+
+# ── SocAktuellStatistikSensor ─────────────────────────────────────────────────
+# NEU v1.2.0: Spiegelt den konfigurierten Batterie-SOC-Sensor (%) als eigenen
+# MEASUREMENT-Sensor in die HA-Statistik. Ermöglicht Vergleichsdiagramm gegen
+# SocPrognoseAtMidnightSensor.
+
+class SocAktuellStatistikSensor(_HauslastBaseSensor):
+    """Batterieladezustand aktuell (für Statistik/Vergleich).
+
+    Leitet soc_pct_raw des Coordinators (= konfigurierter SOC-Sensor) weiter –
+    als MEASUREMENT-Sensor der Integration, damit er neben
+    sensor.hlf_diag_soc_prognose_midnight in der HA-Statistik erscheint.
+
+    entity_id: sensor.hlf_diag_soc_aktuell
+    state_class: MEASUREMENT → geht in HA-Statistik
+    """
+
+    _attr_native_unit_of_measurement = "%"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:battery-heart-variant"
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: HauslastCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{DOMAIN}_diag_soc_aktuell_{entry.entry_id}"
+        self._attr_translation_key = "diag_soc_aktuell"
+        self._translation_key_for_name = "diag_soc_aktuell"
+        self.entity_id = "sensor.hlf_diag_soc_aktuell"
+
+    @property
+    def native_value(self) -> float | None:
+        soc = self._coordinator.soc_pct_raw
+        if soc <= 0 and not self._coordinator._has_valid_data:
+            return None
+        return round(soc, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        c = self._coordinator
+        return {
+            "quelle": c.cfg.get(CONF_BAT_SOC_SENSOR, ""),
+            "bat_kwh": round(c.bat_kwh, 3),
+            "bat_max_kwh": round(c.bat_max_kwh, 3),
+            "aktualisiert": c.calculation_timestamp,
+        }
