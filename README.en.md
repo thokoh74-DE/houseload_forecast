@@ -145,17 +145,18 @@ diag_cutoff_pct: 10.0
 
 All diagnostic sensors appear on the device page under **"Diagnostics"** and are hidden by default:
 
-| Sensor | Description |
-|---|---|
-| Last forecast update | Timestamp of last calculation |
-| Number of data days | How many days of historical data are available |
-| Effective battery capacity | Battery capacity in kWh |
-| Usable capacity | Currently usable energy in kWh |
-| Remaining capacity to cutoff | Remaining energy until discharge cutoff |
-| Force export active | Status of force export mode |
-| Battery Empty At | Forecast time when battery runs empty (false = lasts through) |
-| `sensor.hlf_diag_soc_aktuell` | Current battery SoC in % — as a `MEASUREMENT` sensor in HA statistics; basis for the SOC comparison chart |
-| `sensor.hlf_diag_soc_prognose_midnight` | SOC forecast for the next 72 h, frozen daily at midnight — hourly time series in HA statistics for comparison with actual SoC |
+| Sensor (Entity ID) | Unit | Description |
+|---|---|---|
+| `sensor.hlf_diag_calculation_timestamp` | – | Timestamp of last calculation |
+| `sensor.hlf_diag_data_days` | d | Number of days of historical data available |
+| `sensor.hlf_diag_bat_max_kwh` | kWh | Effective battery capacity |
+| `sensor.hlf_diag_bat_kwh` | kWh | Currently usable energy |
+| `sensor.hlf_diag_bat_rest_kwh` | kWh | Remaining energy until discharge cutoff |
+| `sensor.hlf_diag_force_on` | – | Status of force export mode |
+| `sensor.hlf_diag_battery_empty_at` | – | Forecast time when battery runs empty (`false` = lasts through) |
+| `sensor.hlf_diag_forecast_mae_today` | kWh | Avg. house load forecast deviation today (Mean Absolute Error) |
+| `sensor.hlf_diag_soc_aktuell` | % | Current battery SoC — as a `MEASUREMENT` sensor in HA statistics; basis for the SOC comparison chart |
+| `sensor.hlf_diag_soc_prognose_midnight` | % | SOC forecast for the next 72 h, frozen daily at midnight — hourly time series in HA statistics for comparison with actual SoC |
 
 ---
 

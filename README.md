@@ -145,17 +145,18 @@ diag_cutoff_pct: 10.0
 
 Alle Diagnose-Sensoren erscheinen auf der Gerätseite unter **„Diagnose"** und sind standardmäßig ausgeblendet:
 
-| Sensor | Beschreibung |
-|---|---|
-| Last Forecast Update | Zeitstempel der letzten Berechnung |
-| Data History Days | Wie viele Tage historische Daten vorhanden sind |
-| Effective Battery Capacity | Akkukapazität in kWh |
-| Usable Capacity | Aktuell nutzbare Energie in kWh |
-| Remaining Capacity to Cutoff | Verbleibende Energie bis Entladeschluss |
-| Force Export Active | Status des Force-Export-Modus |
-| Battery Empty At | Zeitpunkt Akku leer laut Prognose (false = reicht durch) |
-| `sensor.hlf_diag_soc_aktuell` | Aktueller Batterieladezustand in % – als `MEASUREMENT`-Sensor in der HA-Statistik; Grundlage für den SOC-Vergleichschart |
-| `sensor.hlf_diag_soc_prognose_midnight` | SOC-Prognose für die nächsten 72 h, täglich um Mitternacht eingefroren – stündliche Zeitreihe in der HA-Statistik für Vergleich mit Ist-SOC |
+| Sensor (Entity-ID) | Einheit | Beschreibung |
+|---|---|---|
+| `sensor.hlf_diag_calculation_timestamp` | – | Zeitstempel der letzten Berechnung |
+| `sensor.hlf_diag_data_days` | d | Anzahl Tage historische Datenbasis |
+| `sensor.hlf_diag_bat_max_kwh` | kWh | Effektive Akkukapazität |
+| `sensor.hlf_diag_bat_kwh` | kWh | Aktuell nutzbare Energie |
+| `sensor.hlf_diag_bat_rest_kwh` | kWh | Verbleibende Energie bis Entladeschluss |
+| `sensor.hlf_diag_force_on` | – | Status des Force-Export-Modus |
+| `sensor.hlf_diag_battery_empty_at` | – | Zeitpunkt Akku leer laut Prognose (`false` = reicht durch) |
+| `sensor.hlf_diag_forecast_mae_today` | kWh | Ø Abweichung Hauslast-Prognose heute (Mean Absolute Error) |
+| `sensor.hlf_diag_soc_aktuell` | % | Aktueller Batterieladezustand – als `MEASUREMENT`-Sensor in der HA-Statistik; Grundlage für den SOC-Vergleichschart |
+| `sensor.hlf_diag_soc_prognose_midnight` | % | SOC-Prognose für die nächsten 72 h, täglich um Mitternacht eingefroren – stündliche Zeitreihe in der HA-Statistik für Vergleich mit Ist-SOC |
 
 ---
 
