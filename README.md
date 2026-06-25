@@ -149,12 +149,13 @@ Alle Diagnose-Sensoren erscheinen auf der Gerätseite unter **„Diagnose"** und
 |---|---|
 | Last Forecast Update | Zeitstempel der letzten Berechnung |
 | Data History Days | Wie viele Tage historische Daten vorhanden sind |
-| Battery State of Charge | Aktueller SoC in % |
 | Effective Battery Capacity | Akkukapazität in kWh |
 | Usable Capacity | Aktuell nutzbare Energie in kWh |
 | Remaining Capacity to Cutoff | Verbleibende Energie bis Entladeschluss |
 | Force Export Active | Status des Force-Export-Modus |
 | Battery Empty At | Zeitpunkt Akku leer laut Prognose (false = reicht durch) |
+| `sensor.hlf_diag_soc_aktuell` | Aktueller Batterieladezustand in % – als `MEASUREMENT`-Sensor in der HA-Statistik; Grundlage für den SOC-Vergleichschart |
+| `sensor.hlf_diag_soc_prognose_midnight` | SOC-Prognose für die nächsten 72 h, täglich um Mitternacht eingefroren – stündliche Zeitreihe in der HA-Statistik für Vergleich mit Ist-SOC |
 
 ---
 
@@ -231,7 +232,7 @@ series:
     show:
       legend_value: false
       in_header: false
-  - entity: sensor.hlf_diag_soc_pct_raw
+  - entity: sensor.hlf_diag_soc_aktuell
     show:
       in_header: true
       in_chart: false
@@ -583,7 +584,10 @@ Dieses Verhalten tritt immer auf wenn Translation-Dateien einer Custom Integrati
 
 Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-### v1.1.2
+### v1.2.0
+- **Neuer Diagnosesensor `sensor.hlf_diag_soc_prognose_midnight`:** SOC-Prognose für 72 h, täglich um Mitternacht eingefroren – stündliche Zeitreihe in der HA-Statistik für Vergleichsdiagramme
+- **Neuer Diagnosesensor `sensor.hlf_diag_soc_aktuell`:** Spiegelt den aktuellen Batterie-SoC als `MEASUREMENT`-Sensor in die HA-Statistik – direkte Gegenüberstellung mit der Mitternacht-Prognose möglich
+- **`sensor.hlf_diag_soc_pct_raw` entfernt:** Wurde durch `sensor.hlf_diag_soc_aktuell` ersetzt (gleicher Wert + Statistik-Unterstützung) ⚠️ Entität nach Update manuell löschen
 - **Verbrauchszähler intern erzeugt:** Statt eines extern konfigurierten Recorder-Sensors genügt jetzt ein Leistungssensor in W (z. B. `sensor.alphaess_inverter_current_house_load`). Die Integration erzeugt `sensor.hlf_hauslast_stundlich` automatisch via Riemann-Integral (TOTAL_INCREASING, überlebt Neustarts)
 - **Force-Export: switch wählbar:** Das Feld „Force-Export aktiv" akzeptiert jetzt auch `switch`-Entitäten (z. B. `switch.alphaess_force_charge` der AlphaESS Modbus TCP - Home Assistant Integration von senalse)
 - **Neue Standardsensoren:** Voreinstellungen auf typische Entitäten der AlphaESS Modbus TCP - Home Assistant Integration von senalse angepasst (`sensor.alphaess_soc_battery`, `sensor.alphaess_discharging_cutoff_soc`, `switch.alphaess_force_charge`, `sensor.alphaess_inverter_current_house_load`)

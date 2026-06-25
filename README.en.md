@@ -149,12 +149,13 @@ All diagnostic sensors appear on the device page under **"Diagnostics"** and are
 |---|---|
 | Last forecast update | Timestamp of last calculation |
 | Number of data days | How many days of historical data are available |
-| Battery state of charge | Current SoC in % |
 | Effective battery capacity | Battery capacity in kWh |
 | Usable capacity | Currently usable energy in kWh |
 | Remaining capacity to cutoff | Remaining energy until discharge cutoff |
 | Force export active | Status of force export mode |
 | Battery Empty At | Forecast time when battery runs empty (false = lasts through) |
+| `sensor.hlf_diag_soc_aktuell` | Current battery SoC in % — as a `MEASUREMENT` sensor in HA statistics; basis for the SOC comparison chart |
+| `sensor.hlf_diag_soc_prognose_midnight` | SOC forecast for the next 72 h, frozen daily at midnight — hourly time series in HA statistics for comparison with actual SoC |
 
 ---
 
@@ -231,7 +232,7 @@ series:
     show:
       legend_value: false
       in_header: false
-  - entity: sensor.hlf_diag_soc_pct_raw
+  - entity: sensor.hlf_diag_soc_aktuell
     show:
       in_header: true
       in_chart: false
@@ -582,6 +583,11 @@ This behaviour occurs whenever the translation files of a custom integration hav
 ## Changelog
 
 The full changelog with all versions can be found in [CHANGELOG.md](CHANGELOG.md).
+
+### v1.2.0
+- **New diagnostic sensor `sensor.hlf_diag_soc_prognose_midnight`:** SOC forecast for 72 h, frozen daily at midnight — hourly time series in HA statistics for comparison charts
+- **New diagnostic sensor `sensor.hlf_diag_soc_aktuell`:** Mirrors the current battery SoC as a `MEASUREMENT` sensor in HA statistics — enables direct comparison with the midnight forecast
+- **`sensor.hlf_diag_soc_pct_raw` removed:** Replaced by `sensor.hlf_diag_soc_aktuell` (same value + statistics support) ⚠️ Delete old entity manually after update
 
 ### v1.1.2
 - **Consumption counter generated internally:** Instead of an externally configured recorder sensor, a power sensor in watts is now sufficient (e.g. `sensor.alphaess_inverter_current_house_load`). The integration automatically creates `sensor.hlf_hauslast_stundlich` via Riemann integration (TOTAL_INCREASING, survives restarts)

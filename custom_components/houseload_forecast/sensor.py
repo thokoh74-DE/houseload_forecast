@@ -63,7 +63,6 @@ _SENSOR_NAMES_DE = {
     "fallback_weekend":           "Hauslast Fallback Wochenende",
     "diag_calculation_timestamp": "Letzte Aktualisierung",
     "diag_data_days":             "Anzahl Tage Datenbasis",
-    "diag_soc_pct_raw":           "Batterieladezustand",
     "diag_bat_max_kwh":           "Effektive Batteriekapazität",
     "diag_bat_kwh":               "Nutzbare Kapazität",
     "diag_bat_rest_kwh":          "Restkapazität bis CutOff",
@@ -83,7 +82,6 @@ _SENSOR_NAMES_EN = {
     "fallback_weekend":           "House Load Fallback Weekend",
     "diag_calculation_timestamp": "Last Forecast Update",
     "diag_data_days":             "Data History Days",
-    "diag_soc_pct_raw":           "Battery State of Charge",
     "diag_bat_max_kwh":           "Effective Battery Capacity",
     "diag_bat_kwh":               "Usable Capacity",
     "diag_bat_rest_kwh":          "Remaining Capacity to Cutoff",
@@ -140,8 +138,6 @@ async def async_setup_entry(
                          "Last Forecast Update", None, None, "mdi:clock-outline"),
         DiagnosticSensor(coordinator, entry, "data_days",
                          "Data History Days", "d", None, "mdi:database-clock"),
-        DiagnosticSensor(coordinator, entry, "soc_pct_raw",
-                         "Battery State of Charge", "%", None, "mdi:battery"),
         DiagnosticSensor(coordinator, entry, "bat_max_kwh",
                          "Effective Battery Capacity", "kWh", None, "mdi:battery-high"),
         DiagnosticSensor(coordinator, entry, "bat_kwh",
@@ -1443,16 +1439,11 @@ class SocPrognoseAtMidnightSensor(_HauslastBaseSensor, RestoreEntity):
     """SOC-Tagesprognose, eingefroren um Mitternacht – stündliche Zeitreihe.
 
     Funktionsweise:
-    - Einmal täglich kurz nach 00:00 Uhr wird ein Snapshot aller heutigen
-      Stunden-Slots aus soc_forecast gespeichert: {hour → soc_pct}.
+    - Täglich um 00:00 Uhr wird ein Snapshot der nächsten 72 Stunden aus
+      soc_forecast eingefroren: {ISO-Stunde → soc_pct}.
     - Bei jedem Coordinator-Update gibt native_value den Snapshot-Wert
-      für die *aktuelle* Stunde zurück.
-    - Da der Coordinator alle 30 Sekunden feuert, schreibt HA den Wert
-      stündlich in die Statistik → vollständige Vergleichslinie im Chart.
-
-    Die erste Berechnung nach Mitternacht liefert noch keine is_forecast=False
-    Vergangenheitsslots für heute, sondern echte Prognosewerte – genau das,
-    was du zum Vergleich brauchst.
+      für die *aktuelle* Stunde zurück → stündliche Statistiklinie im Chart.
+    - Um Mitternacht (Datumswechsel) wird der Snapshot automatisch erneuert.
 
     entity_id: sensor.hlf_diag_soc_prognose_midnight
     state_class: MEASUREMENT → geht in HA-Statistik (stündlicher Mittelwert)
@@ -1465,8 +1456,10 @@ class SocPrognoseAtMidnightSensor(_HauslastBaseSensor, RestoreEntity):
     _attr_icon = "mdi:battery-clock-outline"
     _attr_should_poll = False
 
-    # Persistente Cache-Datei für den Tages-Snapshot
+    # Persistente Cache-Datei für den 72h-Snapshot
     _CACHE_PATH = "/config/.storage/houseload_forecast_midnight_snapshot.json"
+    # Anzahl Stunden die der Snapshot umfasst
+    SNAPSHOT_HOURS = 72
 
     def __init__(self, coordinator: HauslastCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry)
@@ -1474,35 +1467,36 @@ class SocPrognoseAtMidnightSensor(_HauslastBaseSensor, RestoreEntity):
         self._attr_translation_key = "diag_soc_prognose_midnight"
         self._translation_key_for_name = "diag_soc_prognose_midnight"
         self.entity_id = "sensor.hlf_diag_soc_prognose_midnight"
-        # Snapshot: {hour_str → soc_pct}, z.B. {"2026-06-24T00:00:00" → 78.3, ...}
+        # Snapshot: {ISO-Stunde → soc_pct} für 72 Stunden ab Mitternacht
         self._snapshot: dict[str, float] = {}
-        self._snapshot_date: str = ""  # "YYYY-MM-DD" des aktuellen Snapshots
+        self._snapshot_date: str = ""  # "YYYY-MM-DD" des letzten Snapshot-Tages
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        # Snapshot aus persistentem Cache laden (überlebt HA-Neustart)
+        # Cache vom Disk laden – überleben HA-Neustart
         await self.hass.async_add_executor_job(self._load_snapshot_from_disk)
         self.async_write_ha_state()
 
     def _load_snapshot_from_disk(self) -> None:
-        """Lädt den Mitternacht-Snapshot aus der JSON-Cache-Datei."""
+        """Lädt den 72h-Snapshot aus der JSON-Cache-Datei."""
         try:
             if os.path.exists(self._CACHE_PATH):
                 with open(self._CACHE_PATH, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 today_str = dt_util.now().strftime("%Y-%m-%d")
+                # Snapshot akzeptieren wenn er vom heutigen Tag stammt
                 if data.get("date") == today_str:
                     self._snapshot = data.get("snapshot", {})
                     self._snapshot_date = today_str
                     _LOGGER.debug(
-                        "SocPrognoseAtMidnightSensor: Snapshot für %s geladen (%d Slots)",
+                        "SocPrognoseAtMidnightSensor: 72h-Snapshot für %s geladen (%d Slots)",
                         today_str, len(self._snapshot),
                     )
         except Exception as exc:
             _LOGGER.debug("SocPrognoseAtMidnightSensor: Cache laden fehlgeschlagen: %s", exc)
 
     def _save_snapshot_to_disk(self) -> None:
-        """Speichert den aktuellen Snapshot in die JSON-Cache-Datei."""
+        """Speichert den 72h-Snapshot in die JSON-Cache-Datei."""
         try:
             os.makedirs(os.path.dirname(self._CACHE_PATH), exist_ok=True)
             with open(self._CACHE_PATH, "w", encoding="utf-8") as f:
@@ -1514,69 +1508,77 @@ class SocPrognoseAtMidnightSensor(_HauslastBaseSensor, RestoreEntity):
             _LOGGER.debug("SocPrognoseAtMidnightSensor: Cache speichern fehlgeschlagen: %s", exc)
 
     def _maybe_take_snapshot(self) -> None:
-        """Prüft ob ein neuer Tages-Snapshot fällig ist und erstellt ihn.
+        """Erstellt einen neuen 72h-Snapshot wenn der Datumswechsel eingetreten ist.
 
-        Der Snapshot wird genommen, sobald soc_forecast Daten für den heutigen
-        Tag enthält und noch kein Snapshot für heute existiert.
-        Wird bei jedem native_value-Aufruf geprüft – ist also idempotent.
+        Bedingung: Das aktuelle Datum (YYYY-MM-DD) unterscheidet sich vom
+        gespeicherten _snapshot_date → einmalige Erneuerung um Mitternacht.
+        Danach bleibt der Snapshot für den gesamten Tag eingefroren.
+        Ist idempotent – kann beliebig oft aufgerufen werden.
         """
         today_str = dt_util.now().strftime("%Y-%m-%d")
         if self._snapshot_date == today_str and self._snapshot:
-            return  # Bereits für heute vorhanden
+            return  # Snapshot für heute bereits vorhanden
 
-        # Alle heutigen Slots aus soc_forecast extrahieren
+        # Zeitfenster: von 00:00 heute bis 72h später
+        now_local = dt_util.now()
+        midnight_today = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        cutoff = midnight_today + timedelta(hours=self.SNAPSHOT_HOURS)
+
         new_snapshot: dict[str, float] = {}
         for slot in self._coordinator.soc_forecast:
             ps = slot.get("period_start", "")
-            if not ps.startswith(today_str):
-                continue
             soc_pct = slot.get("soc_pct")
-            if soc_pct is not None:
-                # Schlüssel auf volle Stunde normieren (ohne Offset-Suffix)
-                try:
-                    dt_slot = datetime.fromisoformat(ps)
-                    key = dt_slot.replace(minute=0, second=0, microsecond=0,
-                                          tzinfo=None).isoformat()
-                except Exception:
-                    key = ps[:16] + ":00"  # Fallback: erstes 16 Zeichen + ":00"
-                new_snapshot[key] = round(float(soc_pct), 1)
+            if soc_pct is None:
+                continue
+            try:
+                dt_slot = datetime.fromisoformat(ps)
+                # Naive Slots als Lokalzeit behandeln
+                if dt_slot.tzinfo is None:
+                    dt_slot = dt_slot.replace(tzinfo=midnight_today.tzinfo)
+            except Exception:
+                continue
+            if not (midnight_today <= dt_slot < cutoff):
+                continue
+            # Schlüssel: naive ISO-Stunde (ohne Offset) für Chart-Kompatibilität
+            key = dt_slot.replace(minute=0, second=0, microsecond=0,
+                                  tzinfo=None).isoformat()
+            new_snapshot[key] = round(float(soc_pct), 1)
 
         if not new_snapshot:
-            return  # soc_forecast noch leer oder kein heutiger Slot
+            return  # soc_forecast noch leer – nächsten Coordinator-Lauf abwarten
 
         self._snapshot = new_snapshot
         self._snapshot_date = today_str
-        # Persistieren im Executor (I/O darf nicht im Event Loop blockieren)
         self.hass.async_add_executor_job(self._save_snapshot_to_disk)
         _LOGGER.debug(
-            "SocPrognoseAtMidnightSensor: Neuer Snapshot für %s (%d Slots): %s",
+            "SocPrognoseAtMidnightSensor: Neuer 72h-Snapshot für %s (%d Slots, "
+            "von %s bis %s)",
             today_str, len(new_snapshot),
-            {k: v for k, v in list(new_snapshot.items())[:4]},
+            midnight_today.isoformat(), cutoff.isoformat(),
         )
 
     def _current_hour_key(self) -> str:
-        """Gibt den ISO-Schlüssel für die aktuelle volle Stunde zurück."""
+        """Gibt den ISO-Schlüssel (naiv, ohne Offset) für die aktuelle volle Stunde zurück."""
         now = dt_util.now()
         return now.replace(minute=0, second=0, microsecond=0, tzinfo=None).isoformat()
 
     @property
     def native_value(self) -> float | None:
         self._maybe_take_snapshot()
-        key = self._current_hour_key()
-        val = self._snapshot.get(key)
-        return val  # None wenn kein Snapshot oder Stunde nicht im Snapshot
+        return self._snapshot.get(self._current_hour_key())
 
     @property
     def extra_state_attributes(self) -> dict:
         return {
             "snapshot_datum": self._snapshot_date,
             "snapshot_stunden": len(self._snapshot),
-            "snapshot": self._snapshot,  # Alle 24 Stunden-Werte zur Inspektion
+            "snapshot_horizon_h": self.SNAPSHOT_HOURS,
+            "snapshot": self._snapshot,  # Alle 72 Stunden-Werte zur Inspektion
             "aktuelle_stunde_key": self._current_hour_key(),
             "hinweis": (
-                "SOC-Tagesprognose eingefroren um Mitternacht. "
+                f"SOC-Prognose eingefroren um Mitternacht für {self.SNAPSHOT_HOURS}h. "
                 "native_value = Prognosewert der aktuellen Stunde → "
-                "vollständige Vergleichslinie im HA-Statistik-Chart."
+                "Vergleichslinie im HA-Statistik-Chart."
             ),
         }
 

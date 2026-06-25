@@ -6,7 +6,48 @@
 
 ## Deutsch
 
-### v1.1.2
+### v1.2.0
+
+**Neuer Diagnosesensor: `sensor.hlf_diag_soc_prognose_midnight` – SOC-Tagesprognose eingefroren um Mitternacht**
+- Täglich kurz nach 00:00 Uhr wird ein Snapshot der SOC-Simulation für die nächsten **72 Stunden** eingefroren.
+- Der Sensor gibt stündlich den Prognosewert der jeweils aktuellen Stunde aus → vollständige Zeitreihe in der HA-Langzeitstatistik.
+- Der Snapshot wird in `/config/.storage/houseload_forecast_midnight_snapshot.json` persistent gespeichert und überlebt HA-Neustarts.
+- Ermöglicht ein Vergleichsdiagramm: *SOC-Prognose (Mitternacht) vs. tatsächlicher SOC-Verlauf*.
+- Erscheint in der Geräteansicht unter **„Diagnose"** (`EntityCategory.DIAGNOSTIC`).
+
+**Neuer Diagnosesensor: `sensor.hlf_diag_soc_aktuell` – Batterieladezustand für Statistik**
+- Spiegelt den konfigurierten SOC-Sensor (%) als eigenständigen `MEASUREMENT`-Sensor in die HA-Langzeitstatistik.
+- Ermöglicht den direkten stündlichen Vergleich mit `sensor.hlf_diag_soc_prognose_midnight` in ApexCharts via `statistics:`.
+- Zusatzattribute: `quelle`, `bat_kwh`, `bat_max_kwh`, `aktualisiert`.
+- Erscheint unter **„Diagnose"**.
+
+**`sensor.hlf_diag_soc_pct_raw` entfernt**
+- Wurde durch `sensor.hlf_diag_soc_aktuell` ersetzt, der denselben Wert liefert, aber zusätzlich `state_class: MEASUREMENT` für die HA-Statistik besitzt.
+- ⚠️ **Migration:** Nach dem Update `sensor.hlf_diag_soc_pct_raw` manuell unter Einstellungen → Geräte & Dienste → Hauslast Prognose → Entitäten löschen. Bestehende Statistikdaten des alten Sensors bleiben im Recorder erhalten.
+
+**ApexCharts-Vergleichsdiagramm (Beispiel)**
+```yaml
+type: custom:apexcharts-card
+experimental:
+  brush: true
+graph_span: 7d
+brush:
+  selection_span: 24h
+series:
+  - entity: sensor.hlf_diag_soc_prognose_midnight
+    name: SOC Prognose (00:00 Uhr)
+    stroke_dash: 6
+    statistics:
+      type: mean
+      period: hour
+  - entity: sensor.hlf_diag_soc_aktuell
+    name: SOC tatsächlich
+    statistics:
+      type: mean
+      period: hour
+```
+
+
 
 **Verbrauchszähler intern erzeugt – kein externer Recorder-Sensor mehr nötig**
 - Bisher musste ein externer Sensor (`sensor.hauslast_stundlich`) manuell konfiguriert und vom HA-Recorder aufgezeichnet werden.
@@ -122,7 +163,26 @@
 
 🌍 [Deutsch](#deutsch) | **English**
 
-### v1.1.2
+### v1.2.0
+
+**New diagnostic sensor: `sensor.hlf_diag_soc_prognose_midnight` – SOC forecast frozen at midnight**
+- Every day shortly after 00:00, a snapshot of the SOC simulation for the next **72 hours** is frozen.
+- The sensor outputs the forecast value for the current hour every hour → complete time series in HA long-term statistics.
+- The snapshot is stored persistently in `/config/.storage/houseload_forecast_midnight_snapshot.json` and survives HA restarts.
+- Enables a comparison chart: *SOC forecast (midnight) vs. actual SOC*.
+- Appears in the device view under **"Diagnostics"** (`EntityCategory.DIAGNOSTIC`).
+
+**New diagnostic sensor: `sensor.hlf_diag_soc_aktuell` – Battery SoC for statistics**
+- Mirrors the configured SoC sensor (%) as a standalone `MEASUREMENT` sensor into HA long-term statistics.
+- Enables direct hourly comparison with `sensor.hlf_diag_soc_prognose_midnight` in ApexCharts via `statistics:`.
+- Additional attributes: `quelle`, `bat_kwh`, `bat_max_kwh`, `aktualisiert`.
+- Appears under **"Diagnostics"**.
+
+**`sensor.hlf_diag_soc_pct_raw` removed**
+- Replaced by `sensor.hlf_diag_soc_aktuell`, which provides the same value but additionally has `state_class: MEASUREMENT` for HA statistics.
+- ⚠️ **Migration:** After updating, manually delete `sensor.hlf_diag_soc_pct_raw` under Settings → Devices & Services → House Load Forecast → Entities. Existing statistics data of the old sensor remain in the recorder.
+
+
 
 **Consumption counter generated internally – no external recorder sensor required**
 - Previously, an external sensor (`sensor.hauslast_stundlich`) had to be configured manually and recorded by the HA recorder.
