@@ -69,8 +69,8 @@ _SENSOR_NAMES_DE = {
     "diag_force_on":              "Force-Export aktiv",
     "diag_battery_empty_at":      "Akku leer um",
     "diag_forecast_mae_today":    "Ø Abweichung Prognose Heute",
-    "diag_soc_prognose_midnight": "SOC-Prognose um Mitternacht",
-    "diag_soc_aktuell":           "Batterieladezustand (Statistik)",
+    "diag_soc_prognose_midnight": "SOC-Prognose",
+    "diag_soc_aktuell":           "Batterieladezustand",
 }
 
 _SENSOR_NAMES_EN = {
@@ -88,8 +88,8 @@ _SENSOR_NAMES_EN = {
     "diag_force_on":              "Force Export Active",
     "diag_battery_empty_at":      "Battery Empty At",
     "diag_forecast_mae_today":    "Forecast MAE Today",
-    "diag_soc_prognose_midnight": "SOC Forecast at Midnight",
-    "diag_soc_aktuell":           "Battery SOC (Statistics)",
+    "diag_soc_prognose_midnight": "SOC Forecast",
+    "diag_soc_aktuell":           "Battery State of Charge",
 }
 
 def _get_sensor_name(hass_or_none, translation_key: str) -> str:
@@ -730,14 +730,8 @@ class HauslastCoordinator:
                     "is_forecast": True,
                 })
 
-        # Ausgabe auf 48h ab jetzt begrenzen (ältere + zukünftige Slots bis now+48h)
-        cutoff_48h_ts = now_ts + 48 * 3600.0
-        out_48h = [
-            e for e in out
-            if datetime.fromisoformat(e["period_start"]).timestamp() <= cutoff_48h_ts
-        ]
-        self.soc_forecast = out_48h
-        self.soc_slots_processed = len(out_48h)
+        self.soc_forecast = out
+        self.soc_slots_processed = len(out)
 
         # ── Restlaufzeit berechnen ─────────────────────────────────────
         cutoff_kwh = cutoff_kwh_sim  # bereits oben berechnet
@@ -748,7 +742,7 @@ class HauslastCoordinator:
         self.restlaufzeit_min = MAX_RUNTIME_MIN
         self.battery_empty_at = False  # False = reicht durch
 
-        for entry in out_48h:
+        for entry in out:
             if not entry.get("is_forecast", False):
                 continue
             try:
