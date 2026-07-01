@@ -72,6 +72,7 @@ A Home Assistant custom integration for **hourly house load forecasting** and **
 | Force export power | Optional: `number` entity with export power in kW |
 | House load current | Power sensor in W (e.g. `sensor.alphaess_inverter_current_house_load`) – the integration automatically creates `sensor.hlf_hauslast_stundlich` and `sensor.hlf_hauslast_taglich` from this |
 | History period | Number of weeks for historical calculation (0 = all data) |
+| Runtime buffer | Early warning buffer in % above cutoff SOC for runtime calculation (default: 2 %) |
 
 4. **Step 2 – Fallback profiles:** Manual hourly profiles in watts for weekdays (Mon–Fri) and weekends (Sat+Sun) — automatically replaced by historical data once ≥ 10 days are available
 
@@ -95,7 +96,7 @@ Via **Settings → Devices & Services → Hauslast Prognose → Configure**:
 | `sensor.hlf_forecast_today` | kWh | Daily house load forecast for today (House Load Forecast Today) |
 | `sensor.hlf_forecast_tomorrow` | kWh | Daily house load forecast for tomorrow (House Load Forecast Tomorrow) |
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Daily house load forecast for the day after tomorrow (House Load Forecast Day After Tomorrow) |
-| `sensor.hlf_battery_runtime` | min | Remaining time until discharge cutoff (PV Battery Runtime Forecast). The forecast covers **48 hours from now** (today + tomorrow + day after tomorrow). A value of **2880 min means the battery will not run empty within the next 48 hours** based on the current forecast. |
+| `sensor.hlf_battery_runtime` | min | Remaining time until discharge cutoff (PV Battery Runtime Forecast). The forecast covers **72 hours from now**. A value of **2880 min means the battery will not run empty within the forecast horizon** based on the simulation. The warning threshold is `cutoff SOC + runtime buffer` (default: cutoff + 2 %) — configurable under Settings → Sensors. |
 | `sensor.hlf_hauslast_stundlich` | kWh | Consumption of the current running hour (state) and hourly consumption counter for the recorder (TOTAL_INCREASING). Automatically calculated from the configured power sensor. Attributes: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (last 24 h) |
 | `sensor.hlf_hauslast_taglich` | kWh | Consumption of the current running day (state) and daily consumption counter for the recorder (TOTAL_INCREASING). Attributes: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (last 14 days) |
 
@@ -180,9 +181,9 @@ The **IQR outlier filter** removes values outside `[Q1 − 3×IQR, Q3 + 3×IQR]`
 
 ### Battery Forecast (ApexCharts)
 
-Shows the real battery state of charge from the historian (blue, up to "Now") and the SOC forecast for the next 48 hours (dashed orange) — both in percent on a shared Y-axis.
+Shows the real battery state of charge from the historian (blue, up to "Now") and the SOC forecast for the next 72 hours (dashed orange) — both in percent on a shared Y-axis.
 
-**Time window:** 00:00 today until now + 48 hours.
+**Time window:** 00:00 today until now + 72 hours.
 
 - **Battery (actual):** Historical SOC from `sensor.alphaess_soc_battery`
 - **Forecast SOC:** Projected SOC from `soc_hourly_forecast` (`is_forecast: true` entries only)
@@ -584,6 +585,10 @@ This behaviour occurs whenever the translation files of a custom integration hav
 ## Changelog
 
 The full changelog with all versions can be found in [CHANGELOG.md](CHANGELOG.md).
+
+### v1.2.1
+- **Battery runtime calculation fundamentally reworked:** Separate unclamped simulation for runtime detection — warning now triggers in time instead of at the very last moment
+- **New setting "Runtime Buffer":** Early warning threshold at cutoff + n % (default 2 %, slider 0–20 %) — configurable under Settings → Sensors
 
 ### v1.2.0
 - **New diagnostic sensor `sensor.hlf_diag_soc_prognose_midnight`:** SOC forecast for 72 h, frozen daily at midnight — hourly time series in HA statistics for comparison charts

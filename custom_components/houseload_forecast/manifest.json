@@ -1,7 +1,7 @@
 {
   "domain": "houseload_forecast",
   "name": "House Load Forecast & PV Battery Runtime",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "documentation": "https://github.com/thokoh74-DE/houseload_forecast",
   "requirements": [],
   "dependencies": [],

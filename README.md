@@ -72,6 +72,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | Force-Export Leistung | Optional: `number`-Entität mit der Export-Leistung in kW |
 | Hauslast aktuell | Leistungssensor in W (z. B. `sensor.alphaess_inverter_current_house_load`) – die Integration erzeugt daraus automatisch `sensor.hlf_hauslast_stundlich` und `sensor.hlf_hauslast_taglich` |
 | Datenzeitraum | Anzahl Wochen für die historische Berechnung (0 = alles) |
+| Restlaufzeit-Puffer | Frühwarn-Puffer in % über dem Cutoff-SOC für die Restlaufzeit-Berechnung (Standard: 2 %) |
 
 4. **Schritt 2 – Fallback-Profile:** Manuelle Stundenprofile in Watt für Werktage (Mo–Fr) und Wochenende (Sa+So) – werden automatisch durch historische Daten ersetzt, sobald ≥ 10 Datentage vorhanden sind
 
@@ -95,7 +96,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | `sensor.hlf_forecast_today` | kWh | Tagesprognose Hauslast für heute (House Load Forecast Today) |
 | `sensor.hlf_forecast_tomorrow` | kWh | Tagesprognose Hauslast für morgen (House Load Forecast Tomorrow) |
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Tagesprognose Hauslast für übermorgen (House Load Forecast Day After Tomorrow) |
-| `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **48 Stunden ab jetzt** (heute + morgen + übermorgen). Ein Wert von **2880 min bedeutet, dass der Akku innerhalb der nächsten 48 Stunden laut Prognose nicht leer wird.** |
+| `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **72 Stunden ab jetzt**. Ein Wert von **2880 min bedeutet, dass der Akku innerhalb des Prognosehorizonts laut Simulation nicht leer wird.** Die Warnschwelle liegt bei `Cutoff-SOC + Restlaufzeit-Puffer` (Standard: Cutoff + 2 %) – konfigurierbar unter Einstellungen → Sensoren. |
 | `sensor.hlf_hauslast_stundlich` | kWh | Verbrauch der aktuell laufenden Stunde (State) sowie stündlicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Aus dem konfigurierten Leistungssensor automatisch berechnet. Attribute: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (letzte 24 h) |
 | `sensor.hlf_hauslast_taglich` | kWh | Verbrauch des aktuell laufenden Tages (State) sowie täglicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Attribute: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (letzte 14 Tage) |
 
@@ -180,9 +181,9 @@ Der **IQR-Ausreißerfilter** entfernt Werte außerhalb von `[Q1 − 3×IQR, Q3 +
 
 ### Akku-Prognose (ApexCharts)
 
-Zeigt den echten Batterieladezustand aus dem Historian (blau, bis „Jetzt") und die SOC-Prognose der nächsten 48 Stunden (orange gestrichelt) – beides in Prozent auf einer gemeinsamen Y-Achse.
+Zeigt den echten Batterieladezustand aus dem Historian (blau, bis „Jetzt") und die SOC-Prognose der nächsten 72 Stunden (orange gestrichelt) – beides in Prozent auf einer gemeinsamen Y-Achse.
 
-**Zeitfenster:** 00:00 Uhr heute bis jetzt + 48 Stunden.
+**Zeitfenster:** 00:00 Uhr heute bis jetzt + 72 Stunden.
 
 - **Battery (Ist):** Historischer SOC-Verlauf aus `sensor.alphaess_soc_battery`
 - **Prognose-SOC:** Prognostizierter SOC aus `soc_hourly_forecast` (nur `is_forecast: true`)
@@ -584,6 +585,10 @@ Dieses Verhalten tritt immer auf wenn Translation-Dateien einer Custom Integrati
 ## Changelog
 
 Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md](CHANGELOG.md).
+
+### v1.2.1
+- **Restlaufzeit-Berechnung grundlegend überarbeitet:** Separate unkontrollierte Simulation ohne SOC-Clamping — Warnung kommt jetzt rechtzeitig statt erst im letzten Moment
+- **Neuer Einstellungsparameter „Restlaufzeit-Puffer":** Frühwarn-Schwelle bei Cutoff + n % (Standard 2 %, Slider 0–20 %) — unter Einstellungen → Sensoren konfigurierbar
 
 ### v1.2.0
 - **Neuer Diagnosesensor `sensor.hlf_diag_soc_prognose_midnight`:** SOC-Prognose für 72 h, täglich um Mitternacht eingefroren – stündliche Zeitreihe in der HA-Statistik für Vergleichsdiagramme

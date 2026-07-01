@@ -6,6 +6,19 @@
 
 ## Deutsch
 
+### v1.2.1
+
+**Restlaufzeit-Berechnung grundlegend überarbeitet**
+- **Ursache des Fehlers:** Die Hauptsimulation begrenzt den SOC auf `max(cutoff_kwh, ...)` — dadurch konnte `entry["soc_kwh"]` nie unter den Cutoff fallen, und die Restlaufzeit wurde erst im allerletzten Moment erkannt (meist kurz bevor der Akku wirklich leer war).
+- **Fix:** Separate, unkontrollierte Simulation für die Restlaufzeit ohne SOC-Clamping. Der SOC darf in dieser Hilfssimulation unter den Cutoff fallen — der erste Slot, wo das passiert, ist der echte Entladezeitpunkt.
+- **Frühwarn-Puffer:** Die Schwelle liegt standardmäßig bei `Cutoff-SOC + 2 %`, damit die Warnung früh genug kommt.
+
+**Neuer Einstellungsparameter: Restlaufzeit-Puffer (`runtime_buffer_pct`)**
+- Unter **Einstellungen → Geräte & Dienste → Hauslast Prognose → Konfigurieren → Sensoren** erscheint ein neues Feld: **Restlaufzeit-Puffer (%)**.
+- Slider: 0–20 %, Schrittweite 0,5 %, Standardwert **2,0 %**.
+- Gibt an, wie viel Prozent über dem konfigurierten Cutoff-SOC die Frühwarnschwelle liegt. Bei 10 % Cutoff und 2 % Puffer wird die Restlaufzeit ab 12 % SOC berechnet.
+- Wert 0 % = Verhalten wie vor v1.2.1 (Warnung exakt am Cutoff).
+
 ### v1.2.0
 
 **Neuer Diagnosesensor: `sensor.hlf_diag_soc_prognose_midnight` – SOC-Tagesprognose eingefroren um Mitternacht**
@@ -162,6 +175,19 @@ series:
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v1.2.1
+
+**Battery runtime calculation fundamentally reworked**
+- **Root cause:** The main simulation clamps SOC to `max(cutoff_kwh, ...)` — so `entry["soc_kwh"]` could never fall below cutoff, and the runtime warning was only triggered at the very last moment.
+- **Fix:** A separate, unclamped simulation is now used for runtime detection. The SOC is allowed to fall below cutoff in this auxiliary simulation — the first slot where this happens is the real discharge point.
+- **Early warning buffer:** The threshold defaults to `cutoff SOC + 2 %` for timely warnings.
+
+**New configuration parameter: Runtime buffer (`runtime_buffer_pct`)**
+- Under **Settings → Devices & Services → House Load Forecast → Configure → Sensors**, a new field appears: **Runtime Buffer (%)**.
+- Slider: 0–20 %, step 0.5 %, default **2.0 %**.
+- Defines how many percent above the configured cutoff SOC the early warning threshold is set. With 10 % cutoff and 2 % buffer, the runtime is calculated from 12 % SOC.
+- Value 0 % = behaviour as before v1.2.1 (warning exactly at cutoff).
 
 ### v1.2.0
 

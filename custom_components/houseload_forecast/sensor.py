@@ -32,6 +32,8 @@ from .const import (
     CONF_HAUSLAST_AKTUELL,
     CONF_HISTORY_WEEKS,
     DEFAULT_HISTORY_WEEKS,
+    CONF_RUNTIME_BUFFER_PCT,
+    DEFAULT_RUNTIME_BUFFER_PCT,
     MIN_DATA_DAYS,
     WEEKDAY_NAMES,
     DEFAULT_FALLBACK_WT,
@@ -650,6 +652,10 @@ class HauslastCoordinator:
         next_hour_ts       = now_floor_ts + 3600.0
         remaining_fraction = (next_hour_ts - now_ts) / 3600.0
 
+        # Index der aktuellen Stunde in pv_hours/hl_hours (für Restlaufzeit-Simulation)
+        midnight_ts = now_local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        now_floor_h = int((now_floor_ts - midnight_ts) / 3600)
+
         soc = self.bat_kwh
         out: list[dict] = []
 
@@ -734,24 +740,50 @@ class HauslastCoordinator:
         self.soc_slots_processed = len(out)
 
         # ── Restlaufzeit berechnen ─────────────────────────────────────
-        cutoff_kwh = cutoff_kwh_sim  # bereits oben berechnet
-        self.cutoff_kwh = cutoff_kwh
+        # Puffer: cutoff + 2% als Frühwarnschwelle, damit Restlaufzeit
+        # nicht erst im letzten Moment erkannt wird.
+        # Hintergrund: Die Simulation clampt soc_kwh auf cutoff_kwh (Zeile 719/724),
+        # daher kann entry["soc_kwh"] == cutoff_kwh mehrere Stunden lang gelten.
+        # Wir verwenden eine SEPARATE unkontrollierte Simulation (kein Clamping),
+        # um den echten ersten Durchgangspunkt durch die Schwelle zu finden.
 
-        # Debounce: Nur Zukunfts-Slots (is_forecast=True) für Restlaufzeit prüfen
+        # Puffer aus Konfiguration lesen (Einstellungen → Sensoren)
+        RUNTIME_BUFFER_PCT = float(self.cfg.get(CONF_RUNTIME_BUFFER_PCT, DEFAULT_RUNTIME_BUFFER_PCT))
+        cutoff_kwh = cutoff_kwh_sim
+        self.cutoff_kwh = cutoff_kwh
+        runtime_threshold_kwh = cutoff_kwh + (RUNTIME_BUFFER_PCT / 100.0 * self.bat_max_kwh)
+
         runtime_found = False
         self.restlaufzeit_min = MAX_RUNTIME_MIN
-        self.battery_empty_at = False  # False = reicht durch
+        self.battery_empty_at = False
+
+        # Unkontrollierte Simulation: SOC darf unter Cutoff fallen,
+        # damit der erste Durchgang durch die Schwelle korrekt erkannt wird.
+        soc_rt = self.bat_kwh  # Startwert = aktueller SOC
+        # Aktuelle Stunde anteilig vorrücken
+        soc_rt = soc_rt + (
+            float(pv_hours[now_floor_h].get("pv_estimate", 0)) -
+            float(hl_hours[now_floor_h].get("load_estimate", 0)) -
+            self.force_kwh
+        ) * remaining_fraction if now_floor_h < min(pv_len, hl_len) else soc_rt
 
         for entry in out:
             if not entry.get("is_forecast", False):
                 continue
             try:
                 slot_ts = datetime.fromisoformat(entry["period_start"]).timestamp()
+                slot_i  = round((slot_ts - now_floor_ts) / 3600)
             except Exception:
                 continue
-            if entry["soc_kwh"] <= cutoff_kwh and slot_ts > now_ts:
+
+            pv_rt = float(pv_hours[slot_i].get("pv_estimate", 0)) if slot_i < pv_len else 0.0
+            hl_rt = float(hl_hours[slot_i].get("load_estimate", 0)) if slot_i < hl_len else 0.0
+            hl_rt += self.force_kwh
+            soc_rt = soc_rt + (pv_rt - hl_rt)
+            # Kein Clamping hier – SOC kann unter Cutoff fallen
+
+            if soc_rt <= runtime_threshold_kwh and slot_ts > now_ts:
                 self.restlaufzeit_min = int((slot_ts - now_ts) / 60)
-                # Zeitpunkt als lesbarer String
                 empty_dt = datetime.fromisoformat(entry["period_start"])
                 self.battery_empty_at = empty_dt.strftime("%Y-%m-%d %H:%M")
                 runtime_found = True

@@ -11,8 +11,10 @@ CONF_FORCE_EXPORT_POWER = "force_export_power"
 CONF_HAUSLAST_AKTUELL = "hauslast_aktuell_sensor"   # NEU v1.1.2: Leistungssensor in W
 CONF_HAUSLAST_STUNDLICH = "hauslast_stundlich_sensor"  # intern: abgeleiteter Zählersensor
 CONF_HISTORY_WEEKS = "history_weeks"  # 1–52 oder 0 = unbegrenzt
+CONF_RUNTIME_BUFFER_PCT = "runtime_buffer_pct"  # Frühwarn-Puffer Restlaufzeit in %
 
 DEFAULT_HISTORY_WEEKS = 8   # Voreinstellung: 8 Wochen
+DEFAULT_RUNTIME_BUFFER_PCT = 2.0  # Voreinstellung: 2 % über Cutoff-SOC
 MIN_DATA_DAYS = 10          # Mindest-Datenbasis für historische Berechnung
 
 # Wochentagnamen (Python weekday: 0=Mo … 6=So)

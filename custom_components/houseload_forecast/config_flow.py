@@ -19,6 +19,8 @@ from .const import (
     CONF_HAUSLAST_AKTUELL,
     CONF_HISTORY_WEEKS,
     DEFAULT_HISTORY_WEEKS,
+    CONF_RUNTIME_BUFFER_PCT,
+    DEFAULT_RUNTIME_BUFFER_PCT,
     DEFAULT_FALLBACK_WT,
     DEFAULT_FALLBACK_WE,
     FALLBACK_WT_KEYS,
@@ -36,6 +38,10 @@ def _number_selector_w():
 def _history_weeks_selector():
     return selector.selector({"number": {"min": 0, "max": 9999, "step": 1,
                                           "unit_of_measurement": "Wochen", "mode": "box"}})
+
+def _runtime_buffer_selector():
+    return selector.selector({"number": {"min": 0, "max": 20, "step": 0.5,
+                                          "unit_of_measurement": "%", "mode": "slider"}})
 
 def _entity_selector(domain):
     return selector.selector({"entity": {"domain": domain}})
@@ -69,6 +75,8 @@ def _sensors_schema(data: dict) -> vol.Schema:
                      default=data.get(CONF_HAUSLAST_AKTUELL, "sensor.alphaess_inverter_current_house_load")): _sensor_selector(),
         vol.Required(CONF_HISTORY_WEEKS,
                      default=int(data.get(CONF_HISTORY_WEEKS, DEFAULT_HISTORY_WEEKS))): _history_weeks_selector(),
+        vol.Required(CONF_RUNTIME_BUFFER_PCT,
+                     default=float(data.get(CONF_RUNTIME_BUFFER_PCT, DEFAULT_RUNTIME_BUFFER_PCT))): _runtime_buffer_selector(),
     })
 
 
