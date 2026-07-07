@@ -264,6 +264,9 @@ class HauslastCoordinator:
         # NEU: Zeitpunkt Akku leer (None = reicht durch, False wenn MAX_RUNTIME)
         self.battery_empty_at: str | bool = False
 
+        # Akku-Only-Restlaufzeit: Wie lange reicht der Akku ohne PV?
+        self.bat_only_runtime_min: int = 0
+
         self._has_valid_data: bool = False
 
         # Cache wird beim ersten _compute()-Aufruf im Executor geladen.
@@ -757,6 +760,19 @@ class HauslastCoordinator:
         self.restlaufzeit_min = MAX_RUNTIME_MIN
         self.battery_empty_at = False
 
+        # ── FIX: Sofortprüfung – Akku bereits am/unter Schwelle ──────
+        # Wenn der aktuelle SOC bereits am oder unter der Runtime-Schwelle
+        # liegt, ist die Restlaufzeit 0 – unabhängig vom Forecast.
+        # Verhindert die 48h-Anzeige bei faktisch leerem Akku.
+        if self.bat_kwh <= runtime_threshold_kwh:
+            self.restlaufzeit_min = 0
+            self.battery_empty_at = dt_util.now().strftime("%Y-%m-%d %H:%M")
+            runtime_found = True
+            _LOGGER.debug(
+                "Akku bereits am/unter Schwelle (%.3f kWh <= %.3f kWh) → Restlaufzeit = 0",
+                self.bat_kwh, runtime_threshold_kwh,
+            )
+
         # Unkontrollierte Simulation: SOC darf unter Cutoff fallen,
         # damit der erste Durchgang durch die Schwelle korrekt erkannt wird.
         # Startwert: aktueller SOC + anteiliger Rest der aktuellen Stunde
@@ -795,6 +811,26 @@ class HauslastCoordinator:
         if not runtime_found:
             self.restlaufzeit_min = MAX_RUNTIME_MIN
             self.battery_empty_at = False
+
+        # ── Akku-Only-Restlaufzeit (ohne PV) ──────────────────────────
+        # Berechnet wie lange der Akku allein die Hauslast versorgen kann.
+        # Verwendet die aktuelle Hauslast (Durchschnitt der nächsten Stunden)
+        # als Basis. Gibt 0 zurück wenn der Akku am Cutoff ist.
+        hauslast_current_kw = 0.0
+        # Durchschnitt der nächsten 3 Forecast-Stunden für stabileren Wert
+        future_hl = [
+            float(hl_hours[h].get("load_estimate", 0))
+            for h in range(now_floor_h, min(now_floor_h + 3, hl_len))
+            if h < hl_len
+        ]
+        if future_hl:
+            hauslast_current_kw = sum(future_hl) / len(future_hl)
+
+        if hauslast_current_kw > 0.001 and self.bat_rest_kwh > 0.001:
+            bat_only_h = self.bat_rest_kwh / hauslast_current_kw
+            self.bat_only_runtime_min = min(int(bat_only_h * 60), MAX_RUNTIME_MIN)
+        else:
+            self.bat_only_runtime_min = 0
 
         # MAE: mittlere absolute Abweichung Prognose vs. Ist-Verbrauch heute
         try:
@@ -1083,6 +1119,8 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
             "bat_soc_pct": round(c.soc_pct_raw, 1),
             # NEU: Zeitpunkt Akku leer (False = reicht durch)
             "battery_empty_at": empty_at,
+            # Akku-Only-Restlaufzeit ohne PV (Minuten)
+            "bat_only_runtime_min": c.bat_only_runtime_min,
             "diag_cutoff_kwh": round(c.cutoff_kwh, 3),
             "diag_bat_kapazitaet_kwh": round(c.bat_capacity_raw, 3),
             "diag_soc_pct": round(c.soc_pct_raw, 1),
