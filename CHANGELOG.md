@@ -1,10 +1,35 @@
-# Changelog
+# Changelog / Änderungsprotokoll
 
 🌍 **Deutsch** | [English](#english)
 
 ---
 
 ## Deutsch
+
+### v2.0.0
+
+**🐛 Kritischer Bugfix: Restlaufzeit zeigt 48h bei leerem Akku**
+- **Ursache:** Die Restlaufzeit-Berechnung durchsuchte den 72h-SOC-Forecast inkl. PV-Erzeugung. Wenn PV den Akku innerhalb der nächsten Stunde aufladen würde, zeigte die Simulation „Akku wird nie leer" → Fallback auf 2880 min (48h) – selbst bei 5% SOC und nur 47 Wh nutzbarer Energie.
+- **Fix: Sofortprüfung** – Wenn der aktuelle SOC bereits am oder unter der Runtime-Schwelle (Cutoff + Puffer) liegt, wird sofort `Restlaufzeit = 0` gesetzt, unabhängig vom Forecast.
+- **Sägezahn-Muster behoben** – Das oszillierende Muster (675→674→673→2880→…) in der History entfällt, da bei niedrigem Akku sofort 0 zurückgegeben wird.
+
+**🔋 Neues Attribut: Akku-Only-Restlaufzeit (`bat_only_runtime_min`)**
+- Berechnet, wie lange der Akku **allein** (ohne PV) die Hauslast versorgen kann: `nutzbare_kWh ÷ aktuelle_Hauslast_kW × 60`.
+- Verwendet den Durchschnitt der nächsten 3 Forecast-Stunden für einen stabilen Wert.
+- Verfügbar als Attribut im `sensor.hlf_battery_runtime`-Sensor.
+
+**🏗️ Repository auf Produktionsqualität gebracht (Silver Quality Scale)**
+- Diagnostics-Plattform (`diagnostics.py`) – Download über Geräteseite → ⋮ → Diagnose
+- Quality Scale YAML (`quality_scale.yaml`) – Silver-Tier-Tracking
+- CI/CD: GitHub Actions für Hassfest, HACS-Validierung, CodeQL, Ruff-Linting
+- Release-Workflow: Versions-Nr. in `manifest.json` wird automatisch aus dem GitHub-Release-Tag gesetzt
+- `pyproject.toml` mit Ruff-Konfiguration
+- `hacs.json` bereinigt (kein `content_in_root`, kein `hide_default_branch`)
+- `manifest.json`-Keys alphabetisch sortiert nach `domain`/`name`
+- Issue-Templates (Bug Report, Feature Request)
+- `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- Dependabot für GitHub Actions
+- README-Badges (HACS, Release, License, CI-Status, Downloads)
 
 ### v1.2.1
 
@@ -175,6 +200,31 @@ series:
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v2.0.0
+
+**🐛 Critical bugfix: Runtime shows 48h with empty battery**
+- **Root cause:** The runtime calculation searched the 72h SOC forecast including PV production. When PV would recharge the battery within the next hour, the simulation showed "battery will never be empty" → fallback to 2880 min (48h) – even at 5% SOC with only 47 Wh usable energy.
+- **Fix: Immediate check** – If the current SOC is already at or below the runtime threshold (cutoff + buffer), the runtime is immediately set to 0, regardless of the forecast.
+- **Sawtooth pattern eliminated** – The oscillating pattern (675→674→673→2880→…) in history is gone, since low battery now immediately returns 0.
+
+**🔋 New attribute: Battery-only runtime (`bat_only_runtime_min`)**
+- Calculates how long the battery **alone** (without PV) can power the house load: `usable_kWh ÷ current_load_kW × 60`.
+- Uses the average of the next 3 forecast hours for a stable value.
+- Available as attribute on the `sensor.hlf_battery_runtime` sensor.
+
+**🏗️ Repository brought to production quality (Silver Quality Scale)**
+- Diagnostics platform (`diagnostics.py`) – download via device page → ⋮ → Diagnostics
+- Quality Scale YAML (`quality_scale.yaml`) – Silver-tier tracking
+- CI/CD: GitHub Actions for Hassfest, HACS validation, CodeQL, Ruff linting
+- Release workflow: version in `manifest.json` is automatically set from the GitHub release tag
+- `pyproject.toml` with Ruff configuration
+- `hacs.json` cleaned (no `content_in_root`, no `hide_default_branch`)
+- `manifest.json` keys sorted alphabetically after `domain`/`name`
+- Issue templates (Bug Report, Feature Request)
+- `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- Dependabot for GitHub Actions
+- README badges (HACS, Release, License, CI status, Downloads)
 
 ### v1.2.1
 

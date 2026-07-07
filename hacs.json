@@ -1,6 +1,6 @@
 {
   "name": "Hauslast Prognose & Akku Restlaufzeit",
   "render_readme": true,
-  "content_in_root": false,
-  "hide_default_branch": true
+  "homeassistant": "2024.1.0",
+  "country": ["DE", "AT", "CH"]
 }

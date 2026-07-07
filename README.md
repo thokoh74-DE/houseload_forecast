@@ -1,9 +1,38 @@
 # Hauslast Prognose & Akku Restlaufzeit
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![GitHub release](https://img.shields.io/github/release/thokoh74-DE/houseload_forecast.svg)](https://github.com/thokoh74-DE/houseload_forecast/releases)
-[![BETA](https://img.shields.io/badge/Status-BETA-red.svg)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<!-- Badges -->
+<p align="center">
+
+[![HACS Custom][hacs-badge]][hacs-url]
+[![GitHub Release][release-badge]][release-url]
+[![License][license-badge]][license-url]
+[![Hassfest][hassfest-badge]][hassfest-url]
+[![HACS Validation][hacs-val-badge]][hacs-val-url]
+[![CodeQL][codeql-badge]][codeql-url]
+[![Downloads][downloads-badge]][release-url]
+
+</p>
+
+<!-- Logo -->
+<p align="center">
+  <img src="brand/icon@2x.png" width="200" alt="Hauslast Prognose & Akku Restlaufzeit"/>
+</p>
+
+<p align="center">
+  <b>Home Assistant Custom Integration für PV-Anlagen mit Batteriespeicher</b><br>
+  <sub>Hauslast-Prognose · SOC-Forecast · Akku-Restlaufzeit — vollständig lokal</sub>
+</p>
+
+<!-- HACS Install Button -->
+<p align="center">
+  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=thokoh74-DE&repository=houseload_forecast&category=integration">
+    <img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open in HACS" height="40"/>
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://my.home-assistant.io/redirect/config_flow_start/?domain=houseload_forecast">
+    <img src="https://my.home-assistant.io/badges/config_flow_start.svg" alt="Add Integration" height="40"/>
+  </a>
+</p>
 
 🌍 **Deutsch** | [English](README.en.md)
 
@@ -624,7 +653,28 @@ Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md
 
 ## Lizenz
 
-MIT License – siehe [LICENSE](LICENSE)
+[MIT](LICENSE) © Thomas
+
+---
+
+## 🤝 Mitwirken
+
+Beiträge sind willkommen! Bitte lies [CONTRIBUTING.md](CONTRIBUTING.md) vor dem Einreichen eines PRs.
+
+## 🏗️ Quality Scale
+
+| Kriterium | Status |
+|---|---|
+| Config Flow | ✅ |
+| Entity Unique ID | ✅ |
+| Config Entry Unloading | ✅ |
+| Entity Unavailable | ✅ |
+| Diagnostics | ✅ |
+| Entity Translations | ✅ |
+| Devices | ✅ |
+| Integration Owner | ✅ |
+
+Details: [`quality_scale.yaml`](custom_components/houseload_forecast/quality_scale.yaml)
 
 ---
 
@@ -632,4 +682,21 @@ MIT License – siehe [LICENSE](LICENSE)
 
 - [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) für die PV-Vorhersage
 - [ApexCharts Card](https://github.com/RomRider/apexcharts-card) für die Dashboard-Visualisierung
-- [AlphaESS Modbus TCP - Home Assistant Integration von senalse](https://github.com/senalse/ha-alphaess-modbus)
+- [AlphaESS Modbus TCP](https://github.com/senalse/ha-alphaess-modbus) für die Inverter-Anbindung
+
+---
+
+<!-- Badge URLs -->
+[hacs-badge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge
+[hacs-url]: https://github.com/hacs/integration
+[release-badge]: https://img.shields.io/github/v/release/thokoh74-DE/houseload_forecast?style=for-the-badge
+[release-url]: https://github.com/thokoh74-DE/houseload_forecast/releases
+[license-badge]: https://img.shields.io/github/license/thokoh74-DE/houseload_forecast?style=for-the-badge
+[license-url]: https://github.com/thokoh74-DE/houseload_forecast/blob/main/LICENSE
+[hassfest-badge]: https://img.shields.io/github/actions/workflow/status/thokoh74-DE/houseload_forecast/hassfest.yml?label=Hassfest&style=for-the-badge
+[hassfest-url]: https://github.com/thokoh74-DE/houseload_forecast/actions/workflows/hassfest.yml
+[hacs-val-badge]: https://img.shields.io/github/actions/workflow/status/thokoh74-DE/houseload_forecast/hacs.yml?label=HACS&style=for-the-badge
+[hacs-val-url]: https://github.com/thokoh74-DE/houseload_forecast/actions/workflows/hacs.yml
+[codeql-badge]: https://img.shields.io/github/actions/workflow/status/thokoh74-DE/houseload_forecast/codeql.yml?label=CodeQL&style=for-the-badge
+[codeql-url]: https://github.com/thokoh74-DE/houseload_forecast/actions/workflows/codeql.yml
+[downloads-badge]: https://img.shields.io/github/downloads/thokoh74-DE/houseload_forecast/total?style=for-the-badge

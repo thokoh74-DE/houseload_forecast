@@ -1,0 +1,22 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "SIM108", # ternary operator
+    "RUF001", # ambiguous unicode character in string (German umlauts, ß, –, ° etc.)
+    "RUF002", # ambiguous unicode character in docstring
+    "RUF003", # ambiguous unicode character in comment
+    "RUF012", # mutable class attributes should be ClassVar (HA entity pattern uses these intentionally)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components.houseload_forecast"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
