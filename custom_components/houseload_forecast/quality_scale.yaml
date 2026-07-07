@@ -1,0 +1,66 @@
+# Home Assistant Integration Quality Scale
+# https://developers.home-assistant.io/docs/core/integration-quality-scale/
+rules:
+  # ── Bronze (baseline) ──
+  config-flow:
+    status: done
+  entity-unique-id:
+    status: done
+  has-entity-name:
+    status: done
+    comment: Sensors use _attr_has_entity_name = False with explicit naming for bilingual support.
+  runtime-data:
+    status: done
+  appropriate-polling:
+    status: done
+    comment: 30-second interval + event-driven updates on input sensor changes.
+  action-setup:
+    status: exempt
+    comment: Integration does not register custom actions.
+
+  # ── Silver ──
+  config-entry-unloading:
+    status: done
+    comment: async_unload_entry unloads sensor and button platforms.
+  entity-unavailable:
+    status: done
+    comment: Sensors report unavailable until first valid computation completes.
+  log-when-unavailable:
+    status: done
+    comment: Logs debug message when battery sensors are not yet available.
+  parallel-updates:
+    status: done
+    comment: Single coordinator with debounced 5s refresh; no parallel write conflicts.
+  reauthentication-flow:
+    status: exempt
+    comment: No authentication required – reads local HA database and entity states.
+  test-before-setup:
+    status: todo
+    comment: Should verify battery sensor entities exist before setup.
+  docs-installation-parameters:
+    status: done
+  docs-removal-instructions:
+    status: done
+  docs-configuration-parameters:
+    status: done
+  integration-owner:
+    status: done
+    comment: "@thokoh74-DE"
+
+  # ── Gold (tracking) ──
+  devices:
+    status: done
+  diagnostics:
+    status: done
+  discovery:
+    status: exempt
+    comment: Integration reads from existing HA sensors; no network discovery possible.
+  entity-translations:
+    status: done
+    comment: Full bilingual support (DE/EN) via strings.json and translations/.
+  reconfigure-flow:
+    status: todo
+    comment: Options flow exists; reconfigure flow not yet implemented.
+  stale-devices:
+    status: exempt
+    comment: Single device per config entry.

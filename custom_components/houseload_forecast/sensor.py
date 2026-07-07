@@ -20,28 +20,28 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN,
     CONF_BAT_CAPACITY_SENSOR,
-    CONF_BAT_SOC_SENSOR,
     CONF_BAT_CUTOFF_SENSOR,
-    CONF_PV_TODAY_SENSOR,
-    CONF_PV_TOMORROW_SENSOR,
-    CONF_PV_DAY_AFTER_TOMORROW_SENSOR,
+    CONF_BAT_SOC_SENSOR,
     CONF_FORCE_EXPORT_BOOLEAN,
     CONF_FORCE_EXPORT_POWER,
     CONF_HAUSLAST_AKTUELL,
     CONF_HISTORY_WEEKS,
-    DEFAULT_HISTORY_WEEKS,
+    CONF_PV_DAY_AFTER_TOMORROW_SENSOR,
+    CONF_PV_TODAY_SENSOR,
+    CONF_PV_TOMORROW_SENSOR,
     CONF_RUNTIME_BUFFER_PCT,
+    DEFAULT_FALLBACK_WE,
+    DEFAULT_FALLBACK_WT,
+    DEFAULT_HISTORY_WEEKS,
     DEFAULT_RUNTIME_BUFFER_PCT,
+    DOMAIN,
+    FALLBACK_WE_KEYS,
+    FALLBACK_WT_KEYS,
+    GENERATED_HAUSLAST_DAILY_ID,
+    GENERATED_HAUSLAST_SENSOR_ID,
     MIN_DATA_DAYS,
     WEEKDAY_NAMES,
-    DEFAULT_FALLBACK_WT,
-    DEFAULT_FALLBACK_WE,
-    FALLBACK_WT_KEYS,
-    FALLBACK_WE_KEYS,
-    GENERATED_HAUSLAST_SENSOR_ID,
-    GENERATED_HAUSLAST_DAILY_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -285,7 +285,7 @@ class HauslastCoordinator:
         """Cache aus JSON-Datei laden. Gibt default zurück wenn Datei fehlt oder defekt."""
         try:
             if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     data = json.load(f)
                 # Nur Einträge vom heutigen Tag behalten
                 today = dt_util.now().strftime("%Y-%m-%d")
@@ -1548,7 +1548,7 @@ class SocPrognoseAtMidnightSensor(_HauslastBaseSensor, RestoreEntity):
         """Lädt den 72h-Snapshot aus der JSON-Cache-Datei."""
         try:
             if os.path.exists(self._CACHE_PATH):
-                with open(self._CACHE_PATH, "r", encoding="utf-8") as f:
+                with open(self._CACHE_PATH, encoding="utf-8") as f:
                     data = json.load(f)
                 today_str = dt_util.now().strftime("%Y-%m-%d")
                 # Snapshot akzeptieren wenn er vom heutigen Tag stammt

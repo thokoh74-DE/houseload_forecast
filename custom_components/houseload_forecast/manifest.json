@@ -1,15 +1,13 @@
 {
   "domain": "houseload_forecast",
   "name": "House Load Forecast & PV Battery Runtime",
-  "version": "1.2.1",
-  "documentation": "https://github.com/thokoh74-DE/houseload_forecast",
-  "requirements": [],
-  "dependencies": [],
-  "codeowners": [
-    "@thokoh74-DE"
-  ],
-  "iot_class": "local_polling",
+  "codeowners": ["@thokoh74-DE"],
   "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/thokoh74-DE/houseload_forecast",
   "integration_type": "hub",
-  "issue_tracker": "https://github.com/thokoh74-DE/houseload_forecast/issues"
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/thokoh74-DE/houseload_forecast/issues",
+  "requirements": [],
+  "version": "0.0.0"
 }
