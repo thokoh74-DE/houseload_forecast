@@ -1,4 +1,4 @@
-name: Validate with HACS
+name: Validate
 
 on:
   push:
@@ -9,11 +9,30 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  validate:
+  validate-hacs:
+    name: "HACS Validation"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
-      - name: HACS validation
-        uses: hacs/action@main
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
         with:
           category: integration
+
+  validate-hassfest:
+    name: "Hassfest Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          pip install ruff
+          ruff check custom_components/houseload_forecast/

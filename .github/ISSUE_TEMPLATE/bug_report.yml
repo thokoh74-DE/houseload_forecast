@@ -1,0 +1,43 @@
+name: "🐛 Bug Report / Fehlerbericht"
+description: "Report a bug / Einen Fehler melden"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description / Beschreibung"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce / Schritte"
+      value: "1.\n2.\n3."
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: "Home Assistant Version"
+      placeholder: "2026.7.0"
+    validations:
+      required: true
+  - type: input
+    id: hlf_version
+    attributes:
+      label: "House Load Forecast Version"
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs"
+      description: "Settings → System → Logs (filter: houseload_forecast)"
+      render: text
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: "Diagnostics"
+      description: "Device page → ⋮ → Download diagnostics"
+      render: json

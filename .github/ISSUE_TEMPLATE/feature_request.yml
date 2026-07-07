@@ -1,0 +1,14 @@
+name: "✨ Feature Request / Funktionswunsch"
+description: "Suggest a feature / Funktion vorschlagen"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Feature / Funktion"
+    validations:
+      required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: "Use Case / Anwendungsfall"
