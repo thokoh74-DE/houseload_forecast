@@ -761,16 +761,19 @@ class HauslastCoordinator:
         self.battery_empty_at = False
 
         # ── FIX: Sofortprüfung – Akku bereits am/unter Schwelle ──────
-        # Wenn der aktuelle SOC bereits am oder unter der Runtime-Schwelle
-        # liegt, ist die Restlaufzeit 0 – unabhängig vom Forecast.
-        # Verhindert die 48h-Anzeige bei faktisch leerem Akku.
-        if self.bat_kwh <= runtime_threshold_kwh:
+        # Wenn die nutzbare Restkapazität (bat_rest_kwh) unter einem
+        # Minimum liegt, ist der Akku faktisch leer – der Inverter
+        # entlädt nicht mehr. Schwelle: 50 Wh (0.05 kWh).
+        # Verhindert sowohl die 48h-Anzeige als auch unrealistische
+        # Restminuten wenn der SOC knapp über dem Cutoff liegt.
+        MIN_USABLE_KWH = 0.05
+        if self.bat_rest_kwh < MIN_USABLE_KWH:
             self.restlaufzeit_min = 0
             self.battery_empty_at = dt_util.now().strftime("%Y-%m-%d %H:%M")
             runtime_found = True
             _LOGGER.debug(
-                "Akku bereits am/unter Schwelle (%.3f kWh <= %.3f kWh) → Restlaufzeit = 0",
-                self.bat_kwh, runtime_threshold_kwh,
+                "Nutzbare Restkapazität unter Minimum (%.3f kWh < %.3f kWh) → Restlaufzeit = 0",
+                self.bat_rest_kwh, MIN_USABLE_KWH,
             )
 
         # Unkontrollierte Simulation: SOC darf unter Cutoff fallen,
