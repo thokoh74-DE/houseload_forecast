@@ -6,6 +6,13 @@
 
 ## Deutsch
 
+### v2.1.0
+
+**⚡ Recorder-Entlastung: Write-Throttle für `hlf_hauslast_stundlich` / `hlf_hauslast_taglich`**
+- **Ursache:** Beide Sensoren akkumulieren den Hauslast-Leistungssensor per Riemann-Integral und riefen bei *jeder* Zustandsänderung des Quellsensors (sekündlich) `async_write_ha_state()` auf. Ergebnis: ~46.000 Recorder-Zeilen/Tag pro Sensor, ~90.000/Tag zusammen.
+- **Fix:** Die Akkumulation (`_total_kwh`) läuft weiterhin bei jedem Tick unverändert exakt weiter. Der Recorder-Write ist jetzt auf max. 1×/60s gedrosselt (`WRITE_MIN_INTERVAL_S`), zusätzlich wird beim Stunden- bzw. Tageswechsel sofort geschrieben, damit `hourly_history`/`daily_history` (und die darauf basierende MAE-Berechnung) ohne Verzögerung aktuell bleiben.
+- **Effekt:** Reduziert die Recorder-Last dieser beiden Sensoren um ca. 98 %, ohne Genauigkeitsverlust bei der Energiebilanz. Dashboards, die den aktuellen Zählerstand live im Sekundentakt anzeigen wollen, sehen jetzt Aktualisierungen im 60-Sekunden-Rhythmus statt sekündlich.
+
 ### v2.0.0
 
 **🐛 Kritischer Bugfix: Restlaufzeit zeigt 48h bei leerem Akku**
@@ -200,6 +207,13 @@ series:
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v2.1.0
+
+**⚡ Recorder load reduction: write throttle for `hlf_hauslast_stundlich` / `hlf_hauslast_taglich`**
+- **Cause:** Both sensors accumulate the house-load power sensor via Riemann integration and called `async_write_ha_state()` on *every* state change of the source sensor (roughly once per second). Result: ~46,000 recorder rows/day per sensor, ~90,000/day combined.
+- **Fix:** The accumulation (`_total_kwh`) still runs on every tick with unchanged accuracy. The recorder write is now throttled to at most once per 60s (`WRITE_MIN_INTERVAL_S`), with an immediate write on hour/day rollover so `hourly_history`/`daily_history` (and the MAE calculation built on it) stay current without delay.
+- **Effect:** Cuts recorder load from these two sensors by roughly 98% with no loss of energy-accounting accuracy. Dashboards expecting second-by-second updates of the running counter will now see updates roughly every 60 seconds instead.
 
 ### v2.0.0
 
