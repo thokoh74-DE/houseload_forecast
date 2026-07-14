@@ -1215,6 +1215,13 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
     # Anzahl abgeschlossener Stunden die in den Attributen gehalten werden
     HISTORY_HOURS = 24
 
+    # NEU: State wird nicht bei jedem Power-Update (sekündlich) in den Recorder
+    # geschrieben, sondern max. einmal pro WRITE_MIN_INTERVAL_S. Die Riemann-
+    # Akkumulation (_total_kwh) läuft weiterhin bei jedem Tick, nur der teure
+    # async_write_ha_state()-Aufruf wird gedrosselt. Verhindert ~46.000
+    # Recorder-Zeilen/Tag pro Sensor.
+    WRITE_MIN_INTERVAL_S = 60
+
     def __init__(self, entry: ConfigEntry) -> None:
         self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_hauslast_stundlich_{entry.entry_id}"
@@ -1227,6 +1234,8 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
         self._hour_start_ts: datetime | None = None
         # Ringpuffer: abgeschlossene Stunden {"hour": iso-str, "kwh": float}
         self._hourly_history: list[dict] = []
+        # Zeitpunkt des letzten async_write_ha_state()-Aufrufs (Throttle)
+        self._last_write: datetime | None = None
 
     @property
     def device_info(self):
@@ -1288,13 +1297,17 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
                 self._total_kwh = 0.0
         self.async_write_ha_state()
 
-    def _maybe_close_hour(self, now: datetime) -> None:
-        """Prüft ob eine neue Stunde begonnen hat und schließt die alte ab."""
+    def _maybe_close_hour(self, now: datetime) -> bool:
+        """Prüft ob eine neue Stunde begonnen hat und schließt die alte ab.
+
+        Rückgabe: True, wenn eine Stunde abgeschlossen wurde (dann soll der
+        State sofort geschrieben werden, unabhängig vom Write-Throttle).
+        """
         if self._hour_start_ts is None:
             # Erste Initialisierung: aktuelle Stunde merken
             self._hour_start_kwh = self._total_kwh
             self._hour_start_ts = now.replace(minute=0, second=0, microsecond=0)
-            return
+            return False
 
         current_hour = now.replace(minute=0, second=0, microsecond=0)
         if current_hour > self._hour_start_ts:
@@ -1316,13 +1329,18 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
             # Neue Stunde starten
             self._hour_start_kwh = self._total_kwh
             self._hour_start_ts = current_hour
+            return True
+        return False
 
     @callback
     def handle_power_update(self, hass, power_entity_id: str) -> None:
         """Leistungswert (W) auslesen und Zähler akkumulieren.
 
-        Wird bei jeder Zustandsänderung des Leistungssensors aufgerufen.
-        Integriert via Riemann-links-Rechteck: ΔkWh = P_alt [W] × Δt [h].
+        Wird bei jeder Zustandsänderung des Leistungssensors aufgerufen
+        (i.d.R. sekündlich). Integriert via Riemann-links-Rechteck:
+        ΔkWh = P_alt [W] × Δt [h]. Die Akkumulation läuft bei jedem Aufruf,
+        der Recorder-Write wird jedoch gedrosselt (siehe WRITE_MIN_INTERVAL_S),
+        um die HA-Datenbank nicht mit Zehntausenden Zeilen/Tag zu fluten.
         """
         now = dt_util.now()
 
@@ -1340,7 +1358,7 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
                     )
 
         # Stundenwechsel prüfen und ggf. abgeschlossene Stunde in History schreiben
-        self._maybe_close_hour(now)
+        hour_closed = self._maybe_close_hour(now)
 
         # Neuen Leistungswert merken
         state = hass.states.get(power_entity_id)
@@ -1354,7 +1372,17 @@ class HauslastStundlichSensor(SensorEntity, RestoreEntity):
             self._last_power_w = None
 
         self._last_update = now
-        self.async_write_ha_state()
+
+        # Write-Throttle: sofort schreiben bei Stundenabschluss oder erstem
+        # Update, sonst höchstens alle WRITE_MIN_INTERVAL_S Sekunden.
+        due = (
+            hour_closed
+            or self._last_write is None
+            or (now - self._last_write).total_seconds() >= self.WRITE_MIN_INTERVAL_S
+        )
+        if due:
+            self._last_write = now
+            self.async_write_ha_state()
 
 
 # ── HauslastTaeglichSensor ─────────────────────────────────────────────────────
@@ -1378,6 +1406,10 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
     _attr_icon = "mdi:home-lightning-bolt-outline"
     _attr_should_poll = False
 
+    # NEU: siehe HauslastStundlichSensor.WRITE_MIN_INTERVAL_S – gleiche
+    # Drosselung des Recorder-Writes, unabhängige Akkumulation bleibt exakt.
+    WRITE_MIN_INTERVAL_S = 60
+
     def __init__(self, entry: ConfigEntry) -> None:
         self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_hauslast_taeglich_{entry.entry_id}"
@@ -1390,6 +1422,8 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
         self._day_start_ts: datetime | None = None
         # Verlauf der letzten 14 abgeschlossenen Tage
         self._daily_history: list[dict] = []
+        # Zeitpunkt des letzten async_write_ha_state()-Aufrufs (Throttle)
+        self._last_write: datetime | None = None
 
     @property
     def device_info(self):
@@ -1449,12 +1483,16 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
                 self._total_kwh = 0.0
         self.async_write_ha_state()
 
-    def _maybe_close_day(self, now: datetime) -> None:
-        """Prüft ob ein neuer Tag begonnen hat und schließt den alten ab."""
+    def _maybe_close_day(self, now: datetime) -> bool:
+        """Prüft ob ein neuer Tag begonnen hat und schließt den alten ab.
+
+        Rückgabe: True, wenn ein Tag abgeschlossen wurde (dann soll der
+        State sofort geschrieben werden, unabhängig vom Write-Throttle).
+        """
         if self._day_start_ts is None:
             self._day_start_kwh = self._total_kwh
             self._day_start_ts = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            return
+            return False
 
         current_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
         if current_day > self._day_start_ts:
@@ -1472,10 +1510,16 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
                 )
             self._day_start_kwh = self._total_kwh
             self._day_start_ts = current_day
+            return True
+        return False
 
     @callback
     def handle_power_update(self, hass, power_entity_id: str) -> None:
-        """Leistungswert (W) auslesen und Tageszähler akkumulieren (Riemann links)."""
+        """Leistungswert (W) auslesen und Tageszähler akkumulieren (Riemann links).
+
+        Akkumulation läuft bei jedem Aufruf (i.d.R. sekündlich), der
+        Recorder-Write wird gedrosselt (WRITE_MIN_INTERVAL_S).
+        """
         now = dt_util.now()
 
         if self._last_update is not None and self._last_power_w is not None:
@@ -1485,7 +1529,7 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
                 if delta_kwh > 0:
                     self._total_kwh += delta_kwh
 
-        self._maybe_close_day(now)
+        day_closed = self._maybe_close_day(now)
 
         state = hass.states.get(power_entity_id)
         if state and state.state not in ("unknown", "unavailable", ""):
@@ -1497,7 +1541,15 @@ class HauslastTaeglichSensor(SensorEntity, RestoreEntity):
             self._last_power_w = None
 
         self._last_update = now
-        self.async_write_ha_state()
+
+        due = (
+            day_closed
+            or self._last_write is None
+            or (now - self._last_write).total_seconds() >= self.WRITE_MIN_INTERVAL_S
+        )
+        if due:
+            self._last_write = now
+            self.async_write_ha_state()
 
 
 # ── SocPrognoseAtMidnightSensor ───────────────────────────────────────────────
