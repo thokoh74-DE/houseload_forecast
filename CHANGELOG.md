@@ -6,6 +6,13 @@
 
 ## Deutsch
 
+### v2.1.1
+
+**🐛 Kritischer Bugfix: Write-Throttle aus v2.1.0 griff nicht (Feedback-Loop über den Coordinator)**
+- **Ursache:** `hlf_hauslast_stundlich`/`hlf_hauslast_taglich` waren zusätzlich beim `HauslastCoordinator` registriert. Dessen `async_refresh()` schreibt bedingungslos `async_write_ha_state()` auf **alle** registrierten Entities – ein zweiter, vom v2.1.0-Throttle komplett unabhängiger Schreibpfad. Da die eigene Entity-ID dieser Sensoren zusätzlich in `watch_forecast` steht, löste jeder Schreibvorgang nach 5s Debounce den nächsten Coordinator-Refresh aus, der sie erneut schrieb – ein sich selbst antreibender Feedback-Loop im ~5-Sekunden-Takt, der den 60s-Throttle aus v2.1.0 faktisch wirkungslos machte.
+- **Fix:** `hauslast_stundlich_sensor`/`hauslast_taeglich_sensor` werden nicht mehr bei `coordinator.async_register_entities()` registriert. Sie verwalten ihren Recorder-Write bereits vollständig eigenständig über `handle_power_update` (inkl. Throttle aus v2.1.0) und brauchen den Blanket-Write des Coordinators nicht.
+- **Effekt:** Der in v2.1.0 vorgesehene 60-Sekunden-Throttle greift jetzt tatsächlich. Kein Verhaltensunterschied bei den übrigen Sensoren (Prognose, Diagnose etc.) – die werden weiterhin normal vom Coordinator aktualisiert.
+
 ### v2.1.0
 
 **⚡ Recorder-Entlastung: Write-Throttle für `hlf_hauslast_stundlich` / `hlf_hauslast_taglich`**
@@ -207,6 +214,13 @@ series:
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v2.1.1
+
+**🐛 Critical bugfix: the v2.1.0 write throttle didn't take effect (feedback loop via the coordinator)**
+- **Cause:** `hlf_hauslast_stundlich`/`hlf_hauslast_taglich` were additionally registered with the `HauslastCoordinator`. Its `async_refresh()` unconditionally calls `async_write_ha_state()` on **all** registered entities — a second write path completely independent of the v2.1.0 throttle. Since these sensors' own entity IDs were also listed in `watch_forecast`, every write triggered the next coordinator refresh after a 5s debounce, which wrote them again — a self-sustaining feedback loop at roughly 5-second intervals that effectively neutralized the 60s throttle from v2.1.0.
+- **Fix:** `hauslast_stundlich_sensor`/`hauslast_taeglich_sensor` are no longer registered with `coordinator.async_register_entities()`. They already manage their recorder writes entirely on their own via `handle_power_update` (including the v2.1.0 throttle) and don't need the coordinator's blanket write.
+- **Effect:** The 60-second throttle intended in v2.1.0 now actually takes effect. No behavior change for the other sensors (forecast, diagnostics, etc.) — they continue to be refreshed normally by the coordinator.
 
 ### v2.1.0
 
