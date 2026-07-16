@@ -157,7 +157,15 @@ async def async_setup_entry(
     ]
 
     async_add_entities(sensors, True)
-    coordinator.async_register_entities(sensors)
+    # NEU v2.1.1: hauslast_stundlich/taeglich werden bewusst NICHT beim Coordinator
+    # registriert. Sie verwalten ihren eigenen Recorder-Write vollständig selbst
+    # (siehe handle_power_update, WRITE_MIN_INTERVAL_S). Wären sie hier registriert,
+    # würde jeder Coordinator-Refresh sie zusätzlich unthrottled schreiben – und da
+    # ihre eigene Entity-ID in watch_forecast steht, entsteht dadurch ein
+    # sich selbst antreibender ~5s-Feedback-Loop, der den Write-Throttle umgeht.
+    coordinator.async_register_entities(
+        [s for s in sensors if s not in (hauslast_stundlich_sensor, hauslast_taeglich_sensor)]
+    )
 
     # Forecast-Neuberechnung bei Änderung der Eingangssensoren
     watch_forecast = [
