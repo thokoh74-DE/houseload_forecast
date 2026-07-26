@@ -254,6 +254,12 @@
       },
       "forecast_day_after_tomorrow": {
         "name": "Hauslast-Prognose Übermorgen"
+      },
+      "forecast_current_hour": {
+        "name": "Hauslast-Prognose Aktuelle Stunde"
+      },
+      "forecast_next_hour": {
+        "name": "Hauslast-Prognose Nächste Stunde"
       }
     }
   }

@@ -254,6 +254,12 @@
       },
       "forecast_day_after_tomorrow": {
         "name": "House Load Forecast Day After Tomorrow"
+      },
+      "forecast_current_hour": {
+        "name": "Forecast Current Hour"
+      },
+      "forecast_next_hour": {
+        "name": "Forecast Next Hour"
       }
     }
   }

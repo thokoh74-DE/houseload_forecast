@@ -60,6 +60,8 @@ _SENSOR_NAMES_DE = {
     "forecast_today":             "Hauslast-Prognose Heute",
     "forecast_tomorrow":          "Hauslast-Prognose Morgen",
     "forecast_day_after_tomorrow": "Hauslast-Prognose Übermorgen",
+    "forecast_current_hour":      "Hauslast-Prognose Aktuelle Stunde",
+    "forecast_next_hour":         "Hauslast-Prognose Nächste Stunde",
     "battery_runtime":            "PV Akku Restlaufzeit",
     "fallback_weekday":           "Hauslast Fallback Wochentag",
     "fallback_weekend":           "Hauslast Fallback Wochenende",
@@ -79,6 +81,8 @@ _SENSOR_NAMES_EN = {
     "forecast_today":             "House Load Forecast Today",
     "forecast_tomorrow":          "House Load Forecast Tomorrow",
     "forecast_day_after_tomorrow": "House Load Forecast Day After Tomorrow",
+    "forecast_current_hour":      "Forecast Current Hour",
+    "forecast_next_hour":         "Forecast Next Hour",
     "battery_runtime":            "PV Battery Runtime",
     "fallback_weekday":           "House Load Fallback Weekday",
     "fallback_weekend":           "House Load Fallback Weekend",
@@ -135,6 +139,8 @@ async def async_setup_entry(
         HauslastPrognoseHeuteSensor(coordinator, entry),
         HauslastPrognoseMorgenSensor(coordinator, entry),
         HauslastPrognoseUebermorgenSensor(coordinator, entry),
+        ForecastCurrentHourSensor(coordinator, entry),
+        ForecastNextHourSensor(coordinator, entry),
         AkkuRestlaufzeitSensor(coordinator, entry),
         DiagnosticSensor(coordinator, entry, "calculation_timestamp",
                          "Last Forecast Update", None, None, "mdi:clock-outline"),
@@ -1089,6 +1095,110 @@ class HauslastPrognoseUebermorgenSensor(_HauslastBaseSensor):
     @property
     def should_poll(self):
         return False
+
+# ── ForecastCurrentHourSensor ─────────────────────────────────────────────────
+# NEU v2.1.2: Gibt den prognostizierten Verbrauch (kWh) der aktuellen Stunde zurück.
+
+class ForecastCurrentHourSensor(_HauslastBaseSensor):
+    """Hauslast-Prognose für die aktuelle Stunde (kWh).
+
+    Liest den load_estimate der aktuellen vollen Stunde aus forecast_heute.
+    entity_id: sensor.hlf_forecast_current_hour
+    """
+
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_device_class = None
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:home-clock"
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: HauslastCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{DOMAIN}_forecast_current_hour_{entry.entry_id}"
+        self._attr_translation_key = "forecast_current_hour"
+        self._translation_key_for_name = "forecast_current_hour"
+        self.entity_id = "sensor.hlf_forecast_current_hour"
+
+    @property
+    def native_value(self) -> float | None:
+        now_hour = dt_util.now().hour
+        for h, entry in enumerate(self._coordinator.forecast_heute):
+            if h == now_hour:
+                return round(entry["load_estimate"], 3)
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        now_hour = dt_util.now().hour
+        load_w = None
+        for h, entry in enumerate(self._coordinator.forecast_heute):
+            if h == now_hour:
+                load_w = round(entry["load_estimate"] * 1000, 1)
+                break
+        return {
+            "hour": now_hour,
+            "load_estimate_w": load_w,
+        }
+
+
+# ── ForecastNextHourSensor ───────────────────────────────────────────────────
+# NEU v2.1.2: Gibt den prognostizierten Verbrauch (kWh) der nächsten Stunde zurück.
+
+class ForecastNextHourSensor(_HauslastBaseSensor):
+    """Hauslast-Prognose für die nächste Stunde (kWh).
+
+    Liest den load_estimate der nächsten vollen Stunde:
+    - Stunde 0–22: aus forecast_heute
+    - Stunde 23: aus forecast_morgen (Stunde 0)
+    entity_id: sensor.hlf_forecast_next_hour
+    """
+
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_device_class = None
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:home-clock-outline"
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: HauslastCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{DOMAIN}_forecast_next_hour_{entry.entry_id}"
+        self._attr_translation_key = "forecast_next_hour"
+        self._translation_key_for_name = "forecast_next_hour"
+        self.entity_id = "sensor.hlf_forecast_next_hour"
+
+    @property
+    def native_value(self) -> float | None:
+        now_hour = dt_util.now().hour
+        next_hour = now_hour + 1
+        if next_hour < 24:
+            for h, entry in enumerate(self._coordinator.forecast_heute):
+                if h == next_hour:
+                    return round(entry["load_estimate"], 3)
+        else:
+            # 23:xx → nächste Stunde ist 00:00 morgen
+            if self._coordinator.forecast_morgen:
+                return round(self._coordinator.forecast_morgen[0]["load_estimate"], 3)
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        now_hour = dt_util.now().hour
+        next_hour = (now_hour + 1) % 24
+        load_w = None
+        if now_hour < 23:
+            for h, entry in enumerate(self._coordinator.forecast_heute):
+                if h == next_hour:
+                    load_w = round(entry["load_estimate"] * 1000, 1)
+                    break
+        else:
+            if self._coordinator.forecast_morgen:
+                load_w = round(self._coordinator.forecast_morgen[0]["load_estimate"] * 1000, 1)
+        return {
+            "hour": next_hour,
+            "is_tomorrow": now_hour == 23,
+            "load_estimate_w": load_w,
+        }
+
 
 class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
     def __init__(self, coordinator, entry):
