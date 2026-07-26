@@ -6,6 +6,20 @@
 
 ## Deutsch
 
+### v2.1.2
+
+**🆕 Zwei neue Sensoren: Prognose Aktuelle Stunde & Nächste Stunde**
+- **`sensor.hlf_forecast_current_hour`** – Prognostizierter Hauslast-Verbrauch der aktuellen Stunde (kWh). Liest den `load_estimate` der aktuellen vollen Stunde aus `forecast_heute`.
+  - Attribute: `hour` (aktuelle Stunde), `load_estimate_w` (Prognosewert in Watt)
+  - Entity-Name (EN): *Forecast Current Hour* / (DE): *Hauslast-Prognose Aktuelle Stunde*
+  - Icon: `mdi:home-clock`
+- **`sensor.hlf_forecast_next_hour`** – Prognostizierter Hauslast-Verbrauch der nächsten Stunde (kWh). Liest den `load_estimate` der nächsten vollen Stunde aus `forecast_heute` – bei Stunde 23 wird automatisch auf `forecast_morgen[0]` (= 00:00 Uhr morgen) zurückgegriffen.
+  - Attribute: `hour` (nächste Stunde), `is_tomorrow` (true wenn Übergang auf morgen), `load_estimate_w` (Prognosewert in Watt)
+  - Entity-Name (EN): *Forecast Next Hour* / (DE): *Hauslast-Prognose Nächste Stunde*
+  - Icon: `mdi:home-clock-outline`
+- Beide Sensoren sind `state_class: MEASUREMENT` und erscheinen in der HA-Langzeitstatistik.
+- Übersetzungen in allen Sprach-Dateien (strings.json, translations/de.json, translations/en.json) ergänzt.
+
 ### v2.1.1
 
 **🐛 Kritischer Bugfix: Write-Throttle aus v2.1.0 griff nicht (Feedback-Loop über den Coordinator)**
@@ -214,6 +228,20 @@ series:
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v2.1.2
+
+**🆕 Two new sensors: Forecast Current Hour & Forecast Next Hour**
+- **`sensor.hlf_forecast_current_hour`** – Forecasted house load consumption for the current hour (kWh). Reads the `load_estimate` of the current full hour from `forecast_heute`.
+  - Attributes: `hour` (current hour), `load_estimate_w` (forecast value in watts)
+  - Entity name (EN): *Forecast Current Hour* / (DE): *Hauslast-Prognose Aktuelle Stunde*
+  - Icon: `mdi:home-clock`
+- **`sensor.hlf_forecast_next_hour`** – Forecasted house load consumption for the next hour (kWh). Reads the `load_estimate` of the next full hour from `forecast_heute` — at hour 23, it automatically falls back to `forecast_morgen[0]` (= 00:00 tomorrow).
+  - Attributes: `hour` (next hour), `is_tomorrow` (true when crossing into tomorrow), `load_estimate_w` (forecast value in watts)
+  - Entity name (EN): *Forecast Next Hour* / (DE): *Hauslast-Prognose Nächste Stunde*
+  - Icon: `mdi:home-clock-outline`
+- Both sensors use `state_class: MEASUREMENT` and appear in HA long-term statistics.
+- Translations added to all language files (strings.json, translations/de.json, translations/en.json).
 
 ### v2.1.1
 

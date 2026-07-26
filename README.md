@@ -125,6 +125,8 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | `sensor.hlf_forecast_today` | kWh | Tagesprognose Hauslast für heute (House Load Forecast Today) |
 | `sensor.hlf_forecast_tomorrow` | kWh | Tagesprognose Hauslast für morgen (House Load Forecast Tomorrow) |
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Tagesprognose Hauslast für übermorgen (House Load Forecast Day After Tomorrow) |
+| `sensor.hlf_forecast_current_hour` | kWh | Prognostizierter Verbrauch der aktuellen Stunde (Forecast Current Hour). Attribute: `hour`, `load_estimate_w` |
+| `sensor.hlf_forecast_next_hour` | kWh | Prognostizierter Verbrauch der nächsten Stunde (Forecast Next Hour). Bei Stunde 23 wird automatisch 00:00 morgen verwendet. Attribute: `hour`, `is_tomorrow`, `load_estimate_w` |
 | `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **72 Stunden ab jetzt**. Ein Wert von **2880 min bedeutet, dass der Akku innerhalb des Prognosehorizonts laut Simulation nicht leer wird.** Die Warnschwelle liegt bei `Cutoff-SOC + Restlaufzeit-Puffer` (Standard: Cutoff + 2 %) – konfigurierbar unter Einstellungen → Sensoren. |
 | `sensor.hlf_hauslast_stundlich` | kWh | Verbrauch der aktuell laufenden Stunde (State) sowie stündlicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Aus dem konfigurierten Leistungssensor automatisch berechnet. Attribute: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (letzte 24 h) |
 | `sensor.hlf_hauslast_taglich` | kWh | Verbrauch des aktuell laufenden Tages (State) sowie täglicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Attribute: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (letzte 14 Tage) |
@@ -614,6 +616,10 @@ Dieses Verhalten tritt immer auf wenn Translation-Dateien einer Custom Integrati
 ## Changelog
 
 Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md](CHANGELOG.md).
+
+### v2.1.2
+- **Zwei neue Sensoren:** `sensor.hlf_forecast_current_hour` (Prognose aktuelle Stunde) und `sensor.hlf_forecast_next_hour` (Prognose nächste Stunde) – jeweils in kWh, `state_class: MEASUREMENT`, mit Watt-Attribut
+- Übersetzungen in allen Sprachdateien ergänzt
 
 ### v1.2.1
 - **Restlaufzeit-Berechnung grundlegend überarbeitet:** Separate unkontrollierte Simulation ohne SOC-Clamping — Warnung kommt jetzt rechtzeitig statt erst im letzten Moment

@@ -125,6 +125,8 @@ Via **Settings → Devices & Services → Hauslast Prognose → Configure**:
 | `sensor.hlf_forecast_today` | kWh | Daily house load forecast for today (House Load Forecast Today) |
 | `sensor.hlf_forecast_tomorrow` | kWh | Daily house load forecast for tomorrow (House Load Forecast Tomorrow) |
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Daily house load forecast for the day after tomorrow (House Load Forecast Day After Tomorrow) |
+| `sensor.hlf_forecast_current_hour` | kWh | Forecasted consumption for the current hour (Forecast Current Hour). Attributes: `hour`, `load_estimate_w` |
+| `sensor.hlf_forecast_next_hour` | kWh | Forecasted consumption for the next hour (Forecast Next Hour). At hour 23, automatically uses 00:00 tomorrow. Attributes: `hour`, `is_tomorrow`, `load_estimate_w` |
 | `sensor.hlf_battery_runtime` | min | Remaining time until discharge cutoff (PV Battery Runtime Forecast). The forecast covers **72 hours from now**. A value of **2880 min means the battery will not run empty within the forecast horizon** based on the simulation. The warning threshold is `cutoff SOC + runtime buffer` (default: cutoff + 2 %) — configurable under Settings → Sensors. |
 | `sensor.hlf_hauslast_stundlich` | kWh | Consumption of the current running hour (state) and hourly consumption counter for the recorder (TOTAL_INCREASING). Automatically calculated from the configured power sensor. Attributes: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (last 24 h) |
 | `sensor.hlf_hauslast_taglich` | kWh | Consumption of the current running day (state) and daily consumption counter for the recorder (TOTAL_INCREASING). Attributes: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (last 14 days) |
@@ -614,6 +616,10 @@ This behaviour occurs whenever the translation files of a custom integration hav
 ## Changelog
 
 The full changelog with all versions can be found in [CHANGELOG.md](CHANGELOG.md).
+
+### v2.1.2
+- **Two new sensors:** `sensor.hlf_forecast_current_hour` (forecast for the current hour) and `sensor.hlf_forecast_next_hour` (forecast for the next hour) — both in kWh, `state_class: MEASUREMENT`, with watts attribute
+- Translations added to all language files
 
 ### v1.2.1
 - **Battery runtime calculation fundamentally reworked:** Separate unclamped simulation for runtime detection — warning now triggers in time instead of at the very last moment
