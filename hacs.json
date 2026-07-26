@@ -2,5 +2,7 @@
   "name": "Hauslast Prognose & Akku Restlaufzeit",
   "render_readme": true,
   "homeassistant": "2024.1.0",
-  "country": ["DE", "AT", "CH"]
+  "country": ["DE", "AT", "CH"],
+  "zip_release": true,
+  "filename": "houseload_forecast.zip"
 }
