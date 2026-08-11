@@ -127,7 +127,7 @@ Via **Settings → Devices & Services → Hauslast Prognose → Configure**:
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Daily house load forecast for the day after tomorrow (House Load Forecast Day After Tomorrow) |
 | `sensor.hlf_forecast_current_hour` | kWh | Forecasted consumption for the current hour (Forecast Current Hour). Attributes: `hour`, `load_estimate_w` |
 | `sensor.hlf_forecast_next_hour` | kWh | Forecasted consumption for the next hour (Forecast Next Hour). At hour 23, automatically uses 00:00 tomorrow. Attributes: `hour`, `is_tomorrow`, `load_estimate_w` |
-| `sensor.hlf_battery_runtime` | min | Remaining time until discharge cutoff (PV Battery Runtime Forecast). The forecast covers **72 hours from now**. A value of **2880 min means the battery will not run empty within the forecast horizon** based on the simulation. The warning threshold is `cutoff SOC + runtime buffer` (default: cutoff + 2 %) — configurable under Settings → Sensors. |
+| `sensor.hlf_battery_runtime` | min | Remaining time until discharge cutoff (PV Battery Runtime Forecast). The forecast covers **72 hours from now**. A value of **2880 min means the battery will not run empty within the forecast horizon** based on the simulation. The warning threshold is `cutoff SOC + runtime buffer` (default: cutoff + 2 %) — configurable under Settings → Sensors. Since v2.2.0, additionally backed by a trend safety net based on the real SOC discharge rate (see below). |
 | `sensor.hlf_hauslast_stundlich` | kWh | Consumption of the current running hour (state) and hourly consumption counter for the recorder (TOTAL_INCREASING). Automatically calculated from the configured power sensor. Attributes: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (last 24 h) |
 | `sensor.hlf_hauslast_taglich` | kWh | Consumption of the current running day (state) and daily consumption counter for the recorder (TOTAL_INCREASING). Attributes: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (last 14 days) |
 
@@ -169,9 +169,14 @@ bat_kwh: 7.8
 bat_max_kwh: 7.78
 bat_soc_pct: 100.0
 diag_cutoff_pct: 10.0
+diag_trend_runtime_min: 46         # NEW v2.2.0: trend safety net (see below), null if no alarm
+diag_trend_rate_w: -812.4          # NEW v2.2.0: real discharge rate over the last minutes
+diag_hauslast_aktuell_kw: 1.24     # NEW v2.2.0: current instantaneous load (live)
 ```
 
 > **Note on `battery_empty_at`:** `false` means the battery is forecast to last through the full 48-h horizon (= 2880 min runtime). Otherwise the timestamp is provided as `YYYY-MM-DD HH:MM`.
+
+> **NEW v2.2.0 – Trend safety net:** The PV/load forecast can be too slow to flag an imminent cutoff during consumption spikes or an overly optimistic PV forecast (Solcast), because it relies on historical hourly averages rather than real instantaneous consumption. As of v2.2.0, an independent trend calculation runs in parallel: a discharge rate is derived via linear regression from the real SOC development over the last `TREND_WINDOW_MIN` (default: 6) minutes. If this shows a shorter runtime than the forecast, the **smaller** (more conservative) value is used for `sensor.hlf_battery_runtime`. Additionally, the current instantaneous load (`hauslast_aktuell_sensor`, if configured) now feeds directly into the simulation for the *current* hour, instead of relying solely on the historical average.
 
 ### Diagnostic Sensors
 
@@ -189,6 +194,9 @@ All diagnostic sensors appear on the device page under **"Diagnostics"** and are
 | `sensor.hlf_diag_forecast_mae_today` | kWh | Avg. house load forecast deviation today (Mean Absolute Error) |
 | `sensor.hlf_diag_soc_aktuell` | % | Current battery SoC — as a `MEASUREMENT` sensor in HA statistics; basis for the SOC comparison chart |
 | `sensor.hlf_diag_soc_prognose_midnight` | % | SOC forecast for the next 72 h, frozen daily at midnight — hourly time series in HA statistics for comparison with actual SoC |
+| `sensor.hlf_diag_trend_runtime_min` | min | **NEW v2.2.0:** Trend safety net — runtime derived purely from the real SOC discharge rate over the last minutes (independent of PV/load forecast). Empty/`unknown` when the battery isn't clearly discharging right now |
+| `sensor.hlf_diag_trend_rate_w` | W | **NEW v2.2.0:** Smoothed real discharge rate (linear regression over the trend window). Negative = discharging, positive = charging |
+| `sensor.hlf_diag_hauslast_aktuell_kw` | kW | **NEW v2.2.0:** Current instantaneous load from `hauslast_aktuell_sensor`, as fed into the current hour of the runtime simulation |
 
 ---
 
@@ -611,11 +619,25 @@ HA aggressively caches translation files. Simply reloading the integration is no
 
 This behaviour occurs whenever the translation files of a custom integration have been updated.
 
+### Trend safety net doesn't trigger / `diag_trend_runtime_min` stays empty
+
+This is expected in the following cases:
+- **Not enough samples yet:** at least 5 samples within the last 6 minutes are required (typically available after ~2–2.5 minutes at the 30s update interval, so briefly empty right after an HA restart)
+- **Battery isn't clearly discharging right now** (< 20 W discharge rate, e.g. while PV is charging or SOC is stable) — no reason for a trend alarm in that case
+- **`hauslast_aktuell_sensor` not configured:** the live-load correction for the current hour won't apply, but the trend safety net itself still works, since it's based purely on the SOC sensor
+
+To check: `diag_trend_rate_w` shows the currently measured discharge rate in watts (negative = discharging). If it stays at `0.0` permanently despite the battery visibly discharging, check the update frequency of the SOC sensor (`bat_soc_sensor`) — if updates are too infrequent, the linear regression won't produce a meaningful slope.
+
 ---
 
 ## Changelog
 
 The full changelog with all versions can be found in [CHANGELOG.md](CHANGELOG.md).
+
+### v2.2.0
+- **Trend safety net** for `sensor.hlf_battery_runtime`: real SOC discharge rate over the last minutes as a corrective, in case the PV/load forecast was too optimistic
+- **Live-load correction:** current instantaneous consumption (`hauslast_aktuell_sensor`) now feeds directly into the runtime simulation for the current hour
+- New diagnostic sensors: `sensor.hlf_diag_trend_runtime_min`, `sensor.hlf_diag_trend_rate_w`, `sensor.hlf_diag_hauslast_aktuell_kw`
 
 ### v2.1.2
 - **Two new sensors:** `sensor.hlf_forecast_current_hour` (forecast for the current hour) and `sensor.hlf_forecast_next_hour` (forecast for the next hour) — both in kWh, `state_class: MEASUREMENT`, with watts attribute
