@@ -6,6 +6,16 @@
 
 ## Deutsch
 
+### v2.2.0
+
+**🛡️ Trend-Sicherheitsnetz & Live-Lastkorrektur für die Restlaufzeit-Berechnung**
+- **Problem:** In einzelnen Fällen wurde der Batterie-Cutoff real erreicht, während `sensor.pv_akku_restlaufzeit_prognose` erst kurz vorher von 2880 min (= "reicht durch") auf einen realistischen Wert sprang. Ursache: Die 48h-Simulation rechnet mit dem historischen Stundenmittel für Last sowie der Solcast-PV-Prognose. Solange das Modell glaubt, künftige PV-Erzeugung würde den Akku vor dem Cutoff wieder aufladen, meldet es MAX_RUNTIME_MIN – selbst wenn der reale Momentanverbrauch (z. B. durch Verbrauchsspitzen) deutlich über dem historischen Mittel liegt oder die PV-Prognose zu optimistisch ist.
+- **Fix Teil 1 – Live-Lastkorrektur:** Für die *aktuelle* Stunde wird jetzt `max(historisches Stundenmittel, Live-Momentanverbrauch aus hauslast_aktuell_sensor)` verwendet, statt blind dem historischen Mittel zu folgen. Betrifft sowohl die SOC-Forecast-Simulation als auch die separate Restlaufzeit-Simulation. Zukünftige Stunden bleiben unverändert auf Basis der Historie.
+- **Fix Teil 2 – Trend-Sicherheitsnetz:** Unabhängig von der PV-/Lastprognose wird aus der realen SOC-Entwicklung der letzten 6 Minuten (konfigurierbar über `TREND_WINDOW_MIN`) per linearer Regression eine geglättete Entladerate ermittelt. Zeigt der Trend eine kürzere Restlaufzeit als das Prognosemodell, wird der kleinere (konservativere) Wert für `sensor.hlf_battery_runtime` verwendet. Der Trend greift nur bei klarer Entladung (> 20 W), um Fehlalarme bei PV-Ladephasen oder Messrauschen zu vermeiden.
+- **Neue Diagnose-Sensoren:** `sensor.hlf_diag_trend_runtime_min`, `sensor.hlf_diag_trend_rate_w`, `sensor.hlf_diag_hauslast_aktuell_kw`
+- **Neue Attribute an `sensor.hlf_battery_runtime`:** `diag_trend_runtime_min`, `diag_trend_rate_w`, `diag_hauslast_aktuell_kw`
+- Beide Mechanismen sind ohne Wirkung (No-Op), falls `hauslast_aktuell_sensor` nicht konfiguriert ist bzw. noch zu wenige Messpunkte für den Trend vorliegen.
+
 ### v2.1.2
 
 **🆕 Zwei neue Sensoren: Prognose Aktuelle Stunde & Nächste Stunde**
@@ -228,6 +238,16 @@ series:
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### v2.2.0
+
+**🛡️ Trend safety net & live-load correction for the runtime forecast**
+- **Problem:** In some cases the battery cutoff was actually reached while `sensor.pv_akku_restlaufzeit_prognose` only jumped from 2880 min ("lasts through") to a realistic value shortly beforehand. Root cause: the 48h simulation uses the historical hourly-average load profile plus the Solcast PV forecast. As long as the model believes future PV generation will recharge the battery before the cutoff, it keeps reporting MAX_RUNTIME_MIN — even if real instantaneous consumption (e.g. a load spike) is well above the historical average, or the PV forecast is too optimistic.
+- **Fix part 1 – Live-load correction:** For the *current* hour, the simulation now uses `max(historical hourly average, live instantaneous load from hauslast_aktuell_sensor)` instead of blindly following the historical average. Applies to both the SOC forecast simulation and the separate runtime simulation. Future hours remain unchanged, still based on history.
+- **Fix part 2 – Trend safety net:** Independent of the PV/load forecast, a smoothed discharge rate is derived via linear regression from the real SOC trend over the last 6 minutes (configurable via `TREND_WINDOW_MIN`). If the trend implies a shorter runtime than the forecast model, the smaller (more conservative) value is used for `sensor.hlf_battery_runtime`. The trend only kicks in during clear discharge (> 20 W) to avoid false alarms during PV charging or sensor noise.
+- **New diagnostic sensors:** `sensor.hlf_diag_trend_runtime_min`, `sensor.hlf_diag_trend_rate_w`, `sensor.hlf_diag_hauslast_aktuell_kw`
+- **New attributes on `sensor.hlf_battery_runtime`:** `diag_trend_runtime_min`, `diag_trend_rate_w`, `diag_hauslast_aktuell_kw`
+- Both mechanisms are no-ops if `hauslast_aktuell_sensor` isn't configured, or if too few trend samples are available yet.
 
 ### v2.1.2
 
