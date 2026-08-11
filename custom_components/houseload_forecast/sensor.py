@@ -51,7 +51,7 @@ DB_PATH = "/config/home-assistant_v2.db"
 # Maximale Restlaufzeit in Minuten (48 h) – wird als "Akku reicht durch" interpretiert
 MAX_RUNTIME_MIN = 2880
 
-# Trend-Sicherheitsnetz: Fenstergröße und Mindestanzahl Messpunkte für die
+# Trend-Diagnose: Fenstergröße und Mindestanzahl Messpunkte für die
 # reale SOC-Entladerate (bei 30s-Update-Intervall ergeben 6 Minuten ~12 Punkte)
 TREND_WINDOW_MIN = 6
 TREND_MIN_SAMPLES = 5
@@ -80,7 +80,7 @@ _SENSOR_NAMES_DE = {
     "diag_forecast_mae_today":    "Ø Abweichung Prognose Heute",
     "diag_soc_prognose_midnight": "SOC-Prognose",
     "diag_soc_aktuell":           "Batterieladezustand",
-    "diag_trend_runtime_min":     "Trend-Restlaufzeit (Sicherheitsnetz)",
+    "diag_trend_runtime_min":     "Trend-Restlaufzeit (Diagnose)",
     "diag_trend_rate_w":          "Trend-Entladerate",
     "diag_hauslast_aktuell_kw":   "Hauslast aktuell (Live)",
 }
@@ -104,7 +104,7 @@ _SENSOR_NAMES_EN = {
     "diag_forecast_mae_today":    "Forecast MAE Today",
     "diag_soc_prognose_midnight": "SOC Forecast",
     "diag_soc_aktuell":           "Battery State of Charge",
-    "diag_trend_runtime_min":     "Trend Runtime (Safety Net)",
+    "diag_trend_runtime_min":     "Trend Runtime (Diagnostic)",
     "diag_trend_rate_w":          "Trend Discharge Rate",
     "diag_hauslast_aktuell_kw":   "Current Load (Live)",
 }
@@ -170,7 +170,7 @@ async def async_setup_entry(
         DiagnosticSensor(coordinator, entry, "forecast_mae_today",
                          "Forecast MAE Today", "kWh", None, "mdi:chart-bell-curve-cumulative"),
         DiagnosticSensor(coordinator, entry, "trend_runtime_min",
-                         "Trend Runtime (Safety Net)", "min", None, "mdi:trending-down"),
+                         "Trend Runtime (Diagnostic)", "min", None, "mdi:trending-down"),
         DiagnosticSensor(coordinator, entry, "trend_rate_w",
                          "Trend Discharge Rate", "W", None, "mdi:gauge"),
         DiagnosticSensor(coordinator, entry, "hauslast_aktuell_kw",
@@ -308,11 +308,10 @@ class HauslastCoordinator:
         self._frozen_hl_past_date: str = dt_util.now().strftime("%Y-%m-%d")
         self._cache_loaded: bool = False
 
-        # NEU: Trend-Sicherheitsnetz – gleitendes Fenster echter (timestamp, bat_kwh)
-        # Messpunkte, unabhängig von PV-/Lastprognose. Erkennt reale Entladeraten,
-        # die schneller sind als das Modell (z.B. bei Verbrauchsspitzen oder
-        # überoptimistischer PV-Prognose), auch wenn die Simulation noch "reicht durch"
-        # (MAX_RUNTIME_MIN) meldet.
+        # NEU: Trend-Diagnose – gleitendes Fenster echter (timestamp, bat_kwh)
+        # Messpunkte für Monitoring der realen Entladerate. Beeinflusst NICHT
+        # die Restlaufzeit-Berechnung (die läuft PV-bewusst über die Simulation),
+        # sondern wird nur als Diagnose-Attribut exponiert.
         self._soc_trend_samples: list[tuple[float, float]] = []
         self.trend_runtime_min: int | None = None
         self.trend_rate_w: float = 0.0
@@ -387,13 +386,14 @@ class HauslastCoordinator:
             return default
 
     def _update_soc_trend(self) -> None:
-        """Trend-Sicherheitsnetz: schätzt Restlaufzeit rein aus der realen
-        SOC-Entwicklung der letzten Minuten, ohne PV-/Lastprognose.
+        """Trend-Diagnose: beobachtet die reale SOC-Entwicklung der letzten
+        Minuten und berechnet daraus eine Entladerate und geschätzte Restlaufzeit.
 
-        Läuft unabhängig von der forecast-basierten Simulation und dient als
-        Korrektiv, falls diese durch zu optimistische PV-Prognosen oder eine
-        historisch zu niedrig geschätzte Last "reicht durch" (MAX_RUNTIME_MIN)
-        meldet, obwohl der reale Akku schneller entlädt.
+        Dient rein als Monitoring/Diagnose-Attribut (z.B. für Dashboard-Anzeige),
+        greift aber NICHT in die Restlaufzeit-Berechnung ein. Grund: Eine blinde
+        lineare Extrapolation der aktuellen Entladerate ignoriert die PV-Wieder-
+        aufladung am nächsten Morgen und liefert abends/nachts systematisch zu
+        pessimistische Werte.
         """
         now_ts = dt_util.now().timestamp()
         self._soc_trend_samples.append((now_ts, self.bat_kwh))
@@ -656,13 +656,13 @@ class HauslastCoordinator:
         self.bat_rest_kwh = max(self.usable_pct / 100.0 * self.bat_max_kwh, 0.0)
 
         # ── Live-Leistungssensor (Momentanverbrauch, W) ────────────────
-        # Wird für die Trend-Sicherheitsnetz-Berechnung und als Korrektur
+        # Wird für die Trend-Diagnose und als Korrektur
         # der aktuellen Stunde in der Restlaufzeit-Simulation genutzt –
         # zusätzlich zur reinen Historie, die Verbrauchsspitzen nicht kennt.
         aktuell_entity = self.cfg.get(CONF_HAUSLAST_AKTUELL)
         self.hauslast_aktuell_kw = self._get_float(aktuell_entity, 0.0) / 1000.0
 
-        # ── Trend-Sicherheitsnetz: reale SOC-Änderungsrate ──────────────
+        # ── Trend-Diagnose: reale SOC-Änderungsrate ──────────────
         self._update_soc_trend()
 
         # ── Force Export ───────────────────────────────────────────────
@@ -935,16 +935,15 @@ class HauslastCoordinator:
             self.restlaufzeit_min = MAX_RUNTIME_MIN
             self.battery_empty_at = False
 
-        # ── Trend-Sicherheitsnetz anwenden ──────────────────────────────
-        # Falls die reale SOC-Entladerate der letzten Minuten eine kürzere
-        # Restlaufzeit ergibt als die PV-/Last-Prognose (z.B. weil die
-        # Simulation noch auf spätere PV-Erholung hofft, die real gerade
-        # nicht eintritt), gewinnt der kleinere, konservativere Wert.
-        if self.trend_runtime_min is not None and self.trend_runtime_min < self.restlaufzeit_min:
-            self.restlaufzeit_min = self.trend_runtime_min
-            if not self.battery_empty_at:
-                empty_ts = dt_util.now() + timedelta(minutes=self.trend_runtime_min)
-                self.battery_empty_at = empty_ts.strftime("%Y-%m-%d %H:%M")
+        # ── Trend-Diagnose (nur Monitoring, kein Override) ──────────────
+        # Die Trend-Werte (trend_runtime_min, trend_rate_w) werden weiterhin
+        # berechnet und als Diagnose-Attribute exponiert, greifen aber NICHT
+        # mehr in restlaufzeit_min ein. Grund: Der Trend extrapoliert die
+        # aktuelle Entladerate linear ohne PV-Wiederaufladung morgen früh –
+        # das führt abends/nachts zu systematisch zu pessimistischen Werten.
+        # Die Live-Last-Korrektur (max(historisch, aktuell) für die aktuelle
+        # Stunde) läuft weiterhin INNERHALB der PV-bewussten Simulation und
+        # ist davon nicht betroffen.
 
         # ── Akku-Only-Restlaufzeit (ohne PV) ──────────────────────────
         # Berechnet wie lange der Akku allein die Hauslast versorgen kann.
@@ -1359,7 +1358,7 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
             "battery_empty_at": empty_at,
             # Akku-Only-Restlaufzeit ohne PV (Minuten)
             "bat_only_runtime_min": c.bat_only_runtime_min,
-            # NEU: Trend-Sicherheitsnetz – reale SOC-Entladerate der letzten Minuten
+            # NEU: Trend-Diagnose – reale SOC-Entladerate der letzten Minuten
             "diag_trend_runtime_min": c.trend_runtime_min,
             "diag_trend_rate_w": c.trend_rate_w,
             "diag_hauslast_aktuell_kw": round(getattr(c, "hauslast_aktuell_kw", 0.0), 3),

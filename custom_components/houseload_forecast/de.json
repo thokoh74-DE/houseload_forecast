@@ -22,11 +22,11 @@
           "bat_cutoff_sensor": "Mindest-Ladestand in Prozent / Minimum charge level in percent",
           "pv_forecast_today_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
           "pv_forecast_tomorrow_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
-          "force_export_boolean": "Optional – input_boolean oder switch der senalse-Integration / input_boolean or switch from senalse integration",
+          "force_export_boolean": "Optional – input_boolean oder switch der senalse-Integration",
           "force_export_power": "Optional – leer lassen wenn nicht vorhanden / leave empty if not available",
           "history_weeks": "Anzahl Wochen für historische Berechnung. 0 = alle Daten / Number of weeks for historical calculation. 0 = all data. Default: 8",
           "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now",
-          "hauslast_aktuell_sensor": "Leistungssensor in Watt – die Integration erstellt daraus den Verbrauchszähler / Power sensor in watts – the integration derives the consumption counter from this"
+          "hauslast_aktuell_sensor": "Leistungssensor in Watt – die Integration erstellt daraus automatisch den Verbrauchszähler sensor.hlf_hauslast_stundlich"
         }
       },
       "fallback_wt": {
@@ -137,11 +137,11 @@
           "bat_cutoff_sensor": "Mindest-Ladestand in Prozent / Minimum charge level in percent",
           "pv_forecast_today_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
           "pv_forecast_tomorrow_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
-          "force_export_boolean": "Optional – input_boolean oder switch der senalse-Integration / input_boolean or switch from senalse integration",
+          "force_export_boolean": "Optional – input_boolean oder switch der senalse-Integration",
           "force_export_power": "Optional – leer lassen wenn nicht vorhanden / leave empty if not available",
           "history_weeks": "Anzahl Wochen für historische Berechnung. 0 = alle Daten / Number of weeks for historical calculation. 0 = all data. Default: 8",
           "pv_forecast_day_after_tomorrow_sensor": "Solcast-Sensor für übermorgen – optional, wird für echte 48h-Prognose ab jetzt benötigt / Solcast sensor for the day after tomorrow – optional, required for a true 48h forecast from now",
-          "hauslast_aktuell_sensor": "Leistungssensor in Watt – die Integration erstellt daraus den Verbrauchszähler / Power sensor in watts – the integration derives the consumption counter from this"
+          "hauslast_aktuell_sensor": "Leistungssensor in Watt – die Integration erstellt daraus automatisch den Verbrauchszähler sensor.hlf_hauslast_stundlich"
         }
       },
       "fallback_wt": {
@@ -256,10 +256,10 @@
         "name": "Hauslast-Prognose Übermorgen"
       },
       "forecast_current_hour": {
-        "name": "Forecast Current Hour"
+        "name": "Hauslast-Prognose Aktuelle Stunde"
       },
       "forecast_next_hour": {
-        "name": "Forecast Next Hour"
+        "name": "Hauslast-Prognose Nächste Stunde"
       },
       "diag_trend_runtime_min": {
         "name": "Trend-Restlaufzeit (Diagnose)"
