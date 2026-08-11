@@ -260,6 +260,15 @@
       },
       "forecast_next_hour": {
         "name": "Forecast Next Hour"
+      },
+      "diag_trend_runtime_min": {
+        "name": "Trend-Restlaufzeit (Sicherheitsnetz)"
+      },
+      "diag_trend_rate_w": {
+        "name": "Trend-Entladerate"
+      },
+      "diag_hauslast_aktuell_kw": {
+        "name": "Hauslast aktuell (Live)"
       }
     }
   }

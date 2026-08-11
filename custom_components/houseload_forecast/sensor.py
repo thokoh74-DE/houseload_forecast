@@ -80,6 +80,9 @@ _SENSOR_NAMES_DE = {
     "diag_forecast_mae_today":    "Ø Abweichung Prognose Heute",
     "diag_soc_prognose_midnight": "SOC-Prognose",
     "diag_soc_aktuell":           "Batterieladezustand",
+    "diag_trend_runtime_min":     "Trend-Restlaufzeit (Sicherheitsnetz)",
+    "diag_trend_rate_w":          "Trend-Entladerate",
+    "diag_hauslast_aktuell_kw":   "Hauslast aktuell (Live)",
 }
 
 _SENSOR_NAMES_EN = {
@@ -101,6 +104,9 @@ _SENSOR_NAMES_EN = {
     "diag_forecast_mae_today":    "Forecast MAE Today",
     "diag_soc_prognose_midnight": "SOC Forecast",
     "diag_soc_aktuell":           "Battery State of Charge",
+    "diag_trend_runtime_min":     "Trend Runtime (Safety Net)",
+    "diag_trend_rate_w":          "Trend Discharge Rate",
+    "diag_hauslast_aktuell_kw":   "Current Load (Live)",
 }
 
 def _get_sensor_name(hass_or_none, translation_key: str) -> str:
@@ -163,6 +169,12 @@ async def async_setup_entry(
                          "Battery Empty At", None, None, "mdi:battery-alert"),
         DiagnosticSensor(coordinator, entry, "forecast_mae_today",
                          "Forecast MAE Today", "kWh", None, "mdi:chart-bell-curve-cumulative"),
+        DiagnosticSensor(coordinator, entry, "trend_runtime_min",
+                         "Trend Runtime (Safety Net)", "min", None, "mdi:trending-down"),
+        DiagnosticSensor(coordinator, entry, "trend_rate_w",
+                         "Trend Discharge Rate", "W", None, "mdi:gauge"),
+        DiagnosticSensor(coordinator, entry, "hauslast_aktuell_kw",
+                         "Current Load (Live)", "kW", None, "mdi:flash"),
         SocPrognoseAtMidnightSensor(coordinator, entry),
         SocAktuellStatistikSensor(coordinator, entry),
     ]
@@ -304,6 +316,7 @@ class HauslastCoordinator:
         self._soc_trend_samples: list[tuple[float, float]] = []
         self.trend_runtime_min: int | None = None
         self.trend_rate_w: float = 0.0
+        self.hauslast_aktuell_kw: float = 0.0
 
     def async_register_entities(self, entities):
         self._entities = entities
