@@ -51,6 +51,11 @@ DB_PATH = "/config/home-assistant_v2.db"
 # Maximale Restlaufzeit in Minuten (48 h) – wird als "Akku reicht durch" interpretiert
 MAX_RUNTIME_MIN = 2880
 
+# Trend-Sicherheitsnetz: Fenstergröße und Mindestanzahl Messpunkte für die
+# reale SOC-Entladerate (bei 30s-Update-Intervall ergeben 6 Minuten ~12 Punkte)
+TREND_WINDOW_MIN = 6
+TREND_MIN_SAMPLES = 5
+
 # Persistente Cache-Dateien unter /config/.storage/
 _CACHE_SOC   = "/config/.storage/houseload_forecast_soc_cache.json"
 _CACHE_HL    = "/config/.storage/houseload_forecast_hl_cache.json"
@@ -291,6 +296,15 @@ class HauslastCoordinator:
         self._frozen_hl_past_date: str = dt_util.now().strftime("%Y-%m-%d")
         self._cache_loaded: bool = False
 
+        # NEU: Trend-Sicherheitsnetz – gleitendes Fenster echter (timestamp, bat_kwh)
+        # Messpunkte, unabhängig von PV-/Lastprognose. Erkennt reale Entladeraten,
+        # die schneller sind als das Modell (z.B. bei Verbrauchsspitzen oder
+        # überoptimistischer PV-Prognose), auch wenn die Simulation noch "reicht durch"
+        # (MAX_RUNTIME_MIN) meldet.
+        self._soc_trend_samples: list[tuple[float, float]] = []
+        self.trend_runtime_min: int | None = None
+        self.trend_rate_w: float = 0.0
+
     def async_register_entities(self, entities):
         self._entities = entities
 
@@ -358,6 +372,65 @@ class HauslastCoordinator:
             return float(val) if val is not None else default
         except (ValueError, TypeError):
             return default
+
+    def _update_soc_trend(self) -> None:
+        """Trend-Sicherheitsnetz: schätzt Restlaufzeit rein aus der realen
+        SOC-Entwicklung der letzten Minuten, ohne PV-/Lastprognose.
+
+        Läuft unabhängig von der forecast-basierten Simulation und dient als
+        Korrektiv, falls diese durch zu optimistische PV-Prognosen oder eine
+        historisch zu niedrig geschätzte Last "reicht durch" (MAX_RUNTIME_MIN)
+        meldet, obwohl der reale Akku schneller entlädt.
+        """
+        now_ts = dt_util.now().timestamp()
+        self._soc_trend_samples.append((now_ts, self.bat_kwh))
+
+        # Nur die letzten TREND_WINDOW_MIN Minuten behalten
+        cutoff_ts = now_ts - (TREND_WINDOW_MIN * 60.0)
+        self._soc_trend_samples = [
+            (t, v) for (t, v) in self._soc_trend_samples if t >= cutoff_ts
+        ]
+
+        samples = self._soc_trend_samples
+        if len(samples) < TREND_MIN_SAMPLES:
+            self.trend_runtime_min = None
+            self.trend_rate_w = 0.0
+            return
+
+        # Lineare Regression (kleinste Quadrate) über das Fenster für eine
+        # geglättete Entladerate – robuster gegen einzelne Messrauschen
+        # als reine Differenz erster/letzter Punkt.
+        n = len(samples)
+        t0 = samples[0][0]
+        xs = [t - t0 for t, _ in samples]
+        ys = [v for _, v in samples]
+        x_mean = sum(xs) / n
+        y_mean = sum(ys) / n
+        num = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, ys))
+        den = sum((x - x_mean) ** 2 for x in xs)
+
+        if den <= 0:
+            self.trend_runtime_min = None
+            self.trend_rate_w = 0.0
+            return
+
+        slope_kwh_per_s = num / den  # negativ = Akku entlädt sich
+        self.trend_rate_w = round(slope_kwh_per_s * 3600.0 * 1000.0, 1)
+
+        # Nur bei echter, klarer Entladung (kein PV-Laden, kein Rauschen)
+        # eine Restlaufzeit ableiten – sonst kein Alarm.
+        DISCHARGE_THRESHOLD_KW = 0.02  # 20 W Mindest-Entladerate
+        if slope_kwh_per_s >= -(DISCHARGE_THRESHOLD_KW / 3600.0):
+            self.trend_runtime_min = None
+            return
+
+        # cutoff_kwh wird an dieser Stelle im Update-Zyklus frisch aus
+        # cutoff_pct_raw/bat_max_kwh abgeleitet (nicht aus self.cutoff_kwh,
+        # das erst später in der Forecast-Simulation gesetzt wird).
+        cutoff_kwh_now = self.cutoff_pct_raw / 100.0 * self.bat_max_kwh
+        remaining_kwh = max(self.bat_kwh - cutoff_kwh_now, 0.0)
+        seconds_to_cutoff = remaining_kwh / (-slope_kwh_per_s)
+        self.trend_runtime_min = max(int(seconds_to_cutoff / 60.0), 0)
 
     def _compute(self):
         import sqlite3
@@ -569,6 +642,16 @@ class HauslastCoordinator:
         self.bat_kwh      = self.soc_pct_raw / 100.0 * self.bat_max_kwh
         self.bat_rest_kwh = max(self.usable_pct / 100.0 * self.bat_max_kwh, 0.0)
 
+        # ── Live-Leistungssensor (Momentanverbrauch, W) ────────────────
+        # Wird für die Trend-Sicherheitsnetz-Berechnung und als Korrektur
+        # der aktuellen Stunde in der Restlaufzeit-Simulation genutzt –
+        # zusätzlich zur reinen Historie, die Verbrauchsspitzen nicht kennt.
+        aktuell_entity = self.cfg.get(CONF_HAUSLAST_AKTUELL)
+        self.hauslast_aktuell_kw = self._get_float(aktuell_entity, 0.0) / 1000.0
+
+        # ── Trend-Sicherheitsnetz: reale SOC-Änderungsrate ──────────────
+        self._update_soc_trend()
+
         # ── Force Export ───────────────────────────────────────────────
         self.force_on = False
         fe_state = self._get_state(self.cfg.get(CONF_FORCE_EXPORT_BOOLEAN))
@@ -700,6 +783,11 @@ class HauslastCoordinator:
 
             pv_i  = float(pv_hours[i].get("pv_estimate", 0)) if i < pv_len else 0.0
             hl_i  = float(hl_hours[i].get("load_estimate", 0)) if i < hl_len else 0.0
+            # Live-Korrektur nur für die aktuelle Stunde: falls der reale
+            # Momentanverbrauch über dem historischen Stundenmittel liegt,
+            # damit rechnen statt blind der (zu niedrigen) Historie zu folgen.
+            if i == now_floor_h and self.hauslast_aktuell_kw > hl_i:
+                hl_i = self.hauslast_aktuell_kw
             hl_i += self.force_kwh
 
             if slot_ts < now_floor_ts:
@@ -800,6 +888,8 @@ class HauslastCoordinator:
             if now_floor_h < min(pv_len, hl_len):
                 pv_current = float(pv_hours[now_floor_h].get("pv_estimate", 0))
                 hl_current = float(hl_hours[now_floor_h].get("load_estimate", 0))
+                if self.hauslast_aktuell_kw > hl_current:
+                    hl_current = self.hauslast_aktuell_kw
                 soc_rt = soc_rt + (pv_current - hl_current - self.force_kwh) * remaining_fraction
 
             for entry in out:
@@ -815,6 +905,8 @@ class HauslastCoordinator:
 
                 pv_rt = float(pv_hours[slot_i].get("pv_estimate", 0)) if slot_i < pv_len else 0.0
                 hl_rt = float(hl_hours[slot_i].get("load_estimate", 0)) if slot_i < hl_len else 0.0
+                if slot_i == now_floor_h and self.hauslast_aktuell_kw > hl_rt:
+                    hl_rt = self.hauslast_aktuell_kw
                 hl_rt += self.force_kwh
                 soc_rt = soc_rt + (pv_rt - hl_rt)
                 # Kein Clamping – SOC kann unter Cutoff fallen
@@ -829,6 +921,17 @@ class HauslastCoordinator:
         if not runtime_found:
             self.restlaufzeit_min = MAX_RUNTIME_MIN
             self.battery_empty_at = False
+
+        # ── Trend-Sicherheitsnetz anwenden ──────────────────────────────
+        # Falls die reale SOC-Entladerate der letzten Minuten eine kürzere
+        # Restlaufzeit ergibt als die PV-/Last-Prognose (z.B. weil die
+        # Simulation noch auf spätere PV-Erholung hofft, die real gerade
+        # nicht eintritt), gewinnt der kleinere, konservativere Wert.
+        if self.trend_runtime_min is not None and self.trend_runtime_min < self.restlaufzeit_min:
+            self.restlaufzeit_min = self.trend_runtime_min
+            if not self.battery_empty_at:
+                empty_ts = dt_util.now() + timedelta(minutes=self.trend_runtime_min)
+                self.battery_empty_at = empty_ts.strftime("%Y-%m-%d %H:%M")
 
         # ── Akku-Only-Restlaufzeit (ohne PV) ──────────────────────────
         # Berechnet wie lange der Akku allein die Hauslast versorgen kann.
@@ -1243,6 +1346,10 @@ class AkkuRestlaufzeitSensor(_HauslastBaseSensor, RestoreEntity):
             "battery_empty_at": empty_at,
             # Akku-Only-Restlaufzeit ohne PV (Minuten)
             "bat_only_runtime_min": c.bat_only_runtime_min,
+            # NEU: Trend-Sicherheitsnetz – reale SOC-Entladerate der letzten Minuten
+            "diag_trend_runtime_min": c.trend_runtime_min,
+            "diag_trend_rate_w": c.trend_rate_w,
+            "diag_hauslast_aktuell_kw": round(getattr(c, "hauslast_aktuell_kw", 0.0), 3),
             "diag_cutoff_kwh": round(c.cutoff_kwh, 3),
             "diag_bat_kapazitaet_kwh": round(c.bat_capacity_raw, 3),
             "diag_soc_pct": round(c.soc_pct_raw, 1),
