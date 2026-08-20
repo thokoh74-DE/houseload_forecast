@@ -28,9 +28,6 @@ async def async_get_config_entry_diagnostics(
         "sensor.hlf_forecast_today",
         "sensor.hlf_diag_soc_aktuell",
         "sensor.hlf_diag_bat_rest_kwh",
-        "sensor.hlf_diag_trend_runtime_min",
-        "sensor.hlf_diag_trend_rate_w",
-        "sensor.hlf_diag_hauslast_aktuell_kw",
     ]:
         state = hass.states.get(entity_id)
         if state:

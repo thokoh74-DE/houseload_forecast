@@ -260,15 +260,6 @@
       },
       "forecast_next_hour": {
         "name": "Forecast Next Hour"
-      },
-      "diag_trend_runtime_min": {
-        "name": "Trend Runtime (Safety Net)"
-      },
-      "diag_trend_rate_w": {
-        "name": "Trend Discharge Rate"
-      },
-      "diag_hauslast_aktuell_kw": {
-        "name": "Current Load (Live)"
       }
     }
   }

@@ -127,7 +127,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | `sensor.hlf_forecast_day_after_tomorrow` | kWh | Tagesprognose Hauslast für übermorgen (House Load Forecast Day After Tomorrow) |
 | `sensor.hlf_forecast_current_hour` | kWh | Prognostizierter Verbrauch der aktuellen Stunde (Forecast Current Hour). Attribute: `hour`, `load_estimate_w` |
 | `sensor.hlf_forecast_next_hour` | kWh | Prognostizierter Verbrauch der nächsten Stunde (Forecast Next Hour). Bei Stunde 23 wird automatisch 00:00 morgen verwendet. Attribute: `hour`, `is_tomorrow`, `load_estimate_w` |
-| `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **72 Stunden ab jetzt**. Ein Wert von **2880 min bedeutet, dass der Akku innerhalb des Prognosehorizonts laut Simulation nicht leer wird.** Die Warnschwelle liegt bei `Cutoff-SOC + Restlaufzeit-Puffer` (Standard: Cutoff + 2 %) – konfigurierbar unter Einstellungen → Sensoren. Seit v2.2.0 wird der Live-Momentanverbrauch für die laufende Stunde in die Simulation einbezogen, um Verbrauchsspitzen schneller zu erkennen (siehe unten). |
+| `sensor.hlf_battery_runtime` | min | Verbleibende Zeit bis zum Entladeschluss (PV Battery Runtime Forecast). Die Prognose reicht **72 Stunden ab jetzt**. Ein Wert von **2880 min bedeutet, dass der Akku innerhalb des Prognosehorizonts laut Simulation nicht leer wird.** Die Warnschwelle liegt bei `Cutoff-SOC + Restlaufzeit-Puffer` (Standard: Cutoff + 2 %) – konfigurierbar unter Einstellungen → Sensoren. Seit v2.1.3 wird der Live-Momentanverbrauch für die laufende Stunde in die Simulation einbezogen, um Verbrauchsspitzen schneller zu erkennen (siehe unten). |
 | `sensor.hlf_hauslast_stundlich` | kWh | Verbrauch der aktuell laufenden Stunde (State) sowie stündlicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Aus dem konfigurierten Leistungssensor automatisch berechnet. Attribute: `total_kwh`, `current_hour_kwh`, `last_period`, `hourly_history` (letzte 24 h) |
 | `sensor.hlf_hauslast_taglich` | kWh | Verbrauch des aktuell laufenden Tages (State) sowie täglicher Verbrauchszähler für den Recorder (TOTAL_INCREASING). Attribute: `total_kwh`, `today_kwh`, `yesterday_kwh`, `daily_history` (letzte 14 Tage) |
 
@@ -169,14 +169,11 @@ bat_kwh: 7.8
 bat_max_kwh: 7.78
 bat_soc_pct: 100.0
 diag_cutoff_pct: 10.0
-diag_trend_runtime_min: 46         # NEU v2.2.0: Trend-Sicherheitsnetz (siehe unten), null wenn kein Alarm
-diag_trend_rate_w: -812.4          # NEU v2.2.0: reale Entladerate der letzten Minuten
-diag_hauslast_aktuell_kw: 1.24     # NEU v2.2.0: aktueller Momentanverbrauch (Live)
 ```
 
 > **Hinweis zu `battery_empty_at`:** `false` bedeutet, der Akku reicht laut Prognose durch den gesamten 48-h-Horizont (= 2880 min Restlaufzeit). Andernfalls steht hier der Zeitpunkt als `YYYY-MM-DD HH:MM`.
 
-> **NEU v2.2.0 – Live-Lastkorrektur & Trend-Diagnose:** Die PV-/Lastprognose kann bei Verbrauchsspitzen zu spät auf einen bevorstehenden Cutoff hinweisen, weil sie mit historischen Stundenmitteln statt dem realen Momentanverbrauch rechnet. Ab v2.2.0 fließt der aktuelle Momentanverbrauch (`hauslast_aktuell_sensor`, falls konfiguriert) für die *laufende* Stunde direkt in die Simulation ein — als `max(historisches Mittel, Live-Wert)`. Die PV-Wiederaufladung am nächsten Morgen wird dabei weiterhin korrekt berücksichtigt. Zusätzlich wird die reale SOC-Entladerate der letzten Minuten als Diagnose-Attribut berechnet (`diag_trend_runtime_min`, `diag_trend_rate_w`) — diese Werte dienen nur dem Monitoring im Dashboard und beeinflussen **nicht** die Restlaufzeit-Berechnung.
+> **NEU v2.1.3 – Live-Lastkorrektur:** Die PV-/Lastprognose kann bei Verbrauchsspitzen zu spät auf einen bevorstehenden Cutoff hinweisen, weil sie mit historischen Stundenmitteln statt dem realen Momentanverbrauch rechnet. Ab v2.1.3 fließt der aktuelle Momentanverbrauch (`hauslast_aktuell_sensor`, falls konfiguriert) für die *laufende* Stunde direkt in die Simulation ein — als `max(historisches Mittel, Live-Wert)`. Die PV-Wiederaufladung am nächsten Morgen wird dabei weiterhin korrekt berücksichtigt.
 
 ### Diagnose-Sensoren
 
@@ -194,9 +191,6 @@ Alle Diagnose-Sensoren erscheinen auf der Gerätseite unter **„Diagnose"** und
 | `sensor.hlf_diag_forecast_mae_today` | kWh | Ø Abweichung Hauslast-Prognose heute (Mean Absolute Error) |
 | `sensor.hlf_diag_soc_aktuell` | % | Aktueller Batterieladezustand – als `MEASUREMENT`-Sensor in der HA-Statistik; Grundlage für den SOC-Vergleichschart |
 | `sensor.hlf_diag_soc_prognose_midnight` | % | SOC-Prognose für die nächsten 72 h, täglich um Mitternacht eingefroren – stündliche Zeitreihe in der HA-Statistik für Vergleich mit Ist-SOC |
-| `sensor.hlf_diag_trend_runtime_min` | min | **NEU v2.2.0:** Trend-Diagnose – geschätzte Restlaufzeit rein aus der realen SOC-Entladerate der letzten Minuten (nur Monitoring, beeinflusst nicht die Restlaufzeit-Berechnung). Leer/`unknown`, wenn der Akku aktuell nicht klar entlädt |
-| `sensor.hlf_diag_trend_rate_w` | W | **NEU v2.2.0:** Geglättete reale Entladerate (lineare Regression über das Trend-Fenster). Negativ = Entladung, positiv = Ladung. Nur Monitoring |
-| `sensor.hlf_diag_hauslast_aktuell_kw` | kW | **NEU v2.2.0:** Aktueller Momentanverbrauch aus `hauslast_aktuell_sensor`, wie er in die laufende Stunde der Restlaufzeit-Simulation einfließt |
 
 ---
 
@@ -619,24 +613,14 @@ HA cached Translation-Dateien aggressiv. Ein einfaches Neu-Laden der Integration
 
 Dieses Verhalten tritt immer auf wenn Translation-Dateien einer Custom Integration aktualisiert wurden.
 
-### Trend-Diagnose greift nicht / `diag_trend_runtime_min` bleibt leer
-
-Die Trend-Werte sind reine Diagnose-Attribute (Monitoring) und beeinflussen **nicht** die Restlaufzeit-Berechnung. Sie bleiben in folgenden Fällen leer:
-- **Zu wenige Messpunkte:** Es werden mindestens 5 Messpunkte innerhalb der letzten 6 Minuten benötigt (bei 30s-Update-Intervall i. d. R. nach ~2–2,5 Minuten Laufzeit gegeben, direkt nach einem HA-Neustart also kurzzeitig leer)
-- **Akku entlädt sich aktuell nicht klar** (< 20 W Entladerate, z. B. während PV lädt oder bei stabilem SOC)
-
-Zur Kontrolle: `diag_trend_rate_w` zeigt die aktuell gemessene Entladerate in Watt (negativ = Entladung). Bleibt der Wert dauerhaft bei `0.0`, obwohl der Akku spürbar entlädt, den SOC-Sensor (`bat_soc_sensor`) auf Updatefrequenz prüfen – bei zu seltenen Updates liefert die lineare Regression keine sinnvolle Steigung.
-
 ---
 
 ## Changelog
 
 Den vollständigen Changelog mit allen Versionen findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-### v2.2.0
-- **Live-Lastkorrektur** für `sensor.hlf_battery_runtime`: aktueller Momentanverbrauch (`hauslast_aktuell_sensor`) fließt jetzt für die laufende Stunde direkt in die Restlaufzeit-Simulation ein (PV-Wiederaufladung bleibt berücksichtigt)
-- **Trend-Diagnose** (nur Monitoring): reale SOC-Entladerate der letzten Minuten als Diagnose-Attribut
-- Neue Diagnose-Sensoren: `sensor.hlf_diag_trend_runtime_min`, `sensor.hlf_diag_trend_rate_w`, `sensor.hlf_diag_hauslast_aktuell_kw`
+### v2.1.3
+- **Live-Lastkorrektur** für `sensor.hlf_battery_runtime`: aktueller Momentanverbrauch (`hauslast_aktuell_sensor`) fließt jetzt für die laufende Stunde direkt in die PV-bewusste Restlaufzeit-Simulation ein — Verbrauchsspitzen werden sofort erkannt, ohne die PV-Wiederaufladung am nächsten Morgen zu verlieren
 
 ### v2.1.2
 - **Zwei neue Sensoren:** `sensor.hlf_forecast_current_hour` (Prognose aktuelle Stunde) und `sensor.hlf_forecast_next_hour` (Prognose nächste Stunde) – jeweils in kWh, `state_class: MEASUREMENT`, mit Watt-Attribut

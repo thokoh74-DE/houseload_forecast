@@ -6,15 +6,12 @@
 
 ## Deutsch
 
-### v2.2.0
+### v2.1.3
 
-**🛡️ Live-Lastkorrektur für die Restlaufzeit-Berechnung**
-- **Problem:** In einzelnen Fällen wurde der Batterie-Cutoff real erreicht, während `sensor.pv_akku_restlaufzeit_prognose` erst kurz vorher von 2880 min (= "reicht durch") auf einen realistischen Wert sprang. Ursache: Die 48h-Simulation rechnet mit dem historischen Stundenmittel für Last sowie der Solcast-PV-Prognose. Liegt der reale Momentanverbrauch (z. B. durch Verbrauchsspitzen) deutlich über dem historischen Mittel, erkennt die Simulation das erst zu spät.
-- **Fix – Live-Lastkorrektur:** Für die *aktuelle* Stunde wird jetzt `max(historisches Stundenmittel, Live-Momentanverbrauch aus hauslast_aktuell_sensor)` verwendet, statt blind dem historischen Mittel zu folgen. Betrifft sowohl die SOC-Forecast-Simulation als auch die separate Restlaufzeit-Simulation. Zukünftige Stunden bleiben unverändert auf Basis der Historie, PV-Wiederaufladung am nächsten Morgen wird weiterhin korrekt berücksichtigt.
-- **Trend-Diagnose (nur Monitoring):** Aus der realen SOC-Entwicklung der letzten 6 Minuten wird per linearer Regression eine geglättete Entladerate berechnet und als Diagnose-Attribut exponiert (Dashboard-Monitoring). Die Trend-Werte beeinflussen **nicht** die Restlaufzeit-Berechnung, da eine blinde lineare Extrapolation PV-Wiederaufladung ignorieren würde.
-- **Neue Diagnose-Sensoren:** `sensor.hlf_diag_trend_runtime_min` (geschätzte Restlaufzeit aus Trend, nur Monitoring), `sensor.hlf_diag_trend_rate_w` (reale Entladerate), `sensor.hlf_diag_hauslast_aktuell_kw` (Live-Momentanverbrauch)
-- **Neue Attribute an `sensor.hlf_battery_runtime`:** `diag_trend_runtime_min`, `diag_trend_rate_w`, `diag_hauslast_aktuell_kw`
-- Beide Mechanismen sind ohne Wirkung (No-Op), falls `hauslast_aktuell_sensor` nicht konfiguriert ist bzw. noch zu wenige Messpunkte für den Trend vorliegen.
+**🔧 Live-Lastkorrektur für die Restlaufzeit-Berechnung**
+- **Problem:** In einzelnen Fällen wurde der Batterie-Cutoff real erreicht, während die Restlaufzeit-Prognose erst kurz vorher von 2880 min (= "reicht durch") auf einen realistischen Wert sprang. Ursache: Die 48h-Simulation rechnet mit dem historischen Stundenmittel für Last. Liegt der reale Momentanverbrauch (z. B. durch Verbrauchsspitzen wie Backofen, Wärmepumpen-Abtauung) deutlich über dem historischen Mittel, erkennt die Simulation das erst zu spät.
+- **Fix:** Für die *aktuelle* Stunde wird jetzt `max(historisches Stundenmittel, Live-Momentanverbrauch aus hauslast_aktuell_sensor)` in die PV-bewusste Simulation eingespeist. Dadurch werden Verbrauchsspitzen sofort in der Restlaufzeit-Berechnung sichtbar, ohne dass die PV-Wiederaufladung am nächsten Morgen verloren geht. Betrifft sowohl die SOC-Forecast-Simulation als auch die separate Restlaufzeit-Simulation. Zukünftige Stunden bleiben unverändert auf Basis der Historie.
+- Ohne Wirkung (No-Op), falls `hauslast_aktuell_sensor` nicht konfiguriert ist.
 
 ### v2.1.2
 
@@ -239,15 +236,12 @@ series:
 
 🌍 [Deutsch](#deutsch) | **English**
 
-### v2.2.0
+### v2.1.3
 
-**🛡️ Live-load correction for the runtime forecast**
-- **Problem:** In some cases the battery cutoff was actually reached while `sensor.pv_akku_restlaufzeit_prognose` only jumped from 2880 min ("lasts through") to a realistic value shortly beforehand. Root cause: the 48h simulation uses the historical hourly-average load profile plus the Solcast PV forecast. If real instantaneous consumption (e.g. a load spike) is well above the historical average, the simulation detects it too late.
-- **Fix – Live-load correction:** For the *current* hour, the simulation now uses `max(historical hourly average, live instantaneous load from hauslast_aktuell_sensor)` instead of blindly following the historical average. Applies to both the SOC forecast simulation and the separate runtime simulation. Future hours remain unchanged, still based on history. PV recharging the next morning continues to be correctly accounted for.
-- **Trend diagnostics (monitoring only):** A smoothed discharge rate is derived via linear regression from the real SOC trend over the last 6 minutes and exposed as a diagnostic attribute (dashboard monitoring). The trend values do **not** influence the runtime calculation, since a blind linear extrapolation would ignore PV recharging.
-- **New diagnostic sensors:** `sensor.hlf_diag_trend_runtime_min` (estimated runtime from trend, monitoring only), `sensor.hlf_diag_trend_rate_w` (real discharge rate), `sensor.hlf_diag_hauslast_aktuell_kw` (live instantaneous load)
-- **New attributes on `sensor.hlf_battery_runtime`:** `diag_trend_runtime_min`, `diag_trend_rate_w`, `diag_hauslast_aktuell_kw`
-- Both mechanisms are no-ops if `hauslast_aktuell_sensor` isn't configured, or if too few trend samples are available yet.
+**🔧 Live-load correction for the runtime forecast**
+- **Problem:** In some cases the battery cutoff was actually reached while the runtime forecast only jumped from 2880 min ("lasts through") to a realistic value shortly beforehand. Root cause: the 48h simulation uses the historical hourly-average load profile. If real instantaneous consumption (e.g. from an oven, heat pump defrost cycle) is well above the historical average, the simulation detects it too late.
+- **Fix:** For the *current* hour, the simulation now uses `max(historical hourly average, live instantaneous load from hauslast_aktuell_sensor)`. This makes consumption spikes immediately visible in the runtime calculation, without losing PV recharging the next morning. Applies to both the SOC forecast simulation and the separate runtime simulation. Future hours remain unchanged, still based on history.
+- No-op if `hauslast_aktuell_sensor` isn't configured.
 
 ### v2.1.2
 
