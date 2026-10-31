@@ -57,7 +57,7 @@ A Home Assistant custom integration for **hourly house load forecasting** and **
 | Requirement | Details |
 |---|---|
 | Home Assistant | ≥ 2024.1 (recommended: ≥ 2026.3 for icon support) |
-| Battery Integration | AlphaESS or similar — must provide capacity (kWh) and SoC (%) as sensors |
+| Battery Integration | AlphaESS or similar — must provide capacity (energy sensor, e.g. Wh or kWh) and SoC (%) as sensors |
 | PV Forecast | [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) with `detailedHourly` attribute |
 | House Load Sensor | Sensor with `state_class: total_increasing` (kWh, hourly) or `measurement` (W) — must be recorded in HA statistics |
 | SQLite Database | Standard HA database at `/config/home-assistant_v2.db` |
@@ -85,13 +85,15 @@ A Home Assistant custom integration for **hourly house load forecasting** and **
 
 ## Setup
 
+Capacity sensors with incompatible units (e.g. W) are skipped with a warning. Until valid battery data returns, an existing forecast may remain visible.
+
 1. **Settings → Devices & Services → Add Integration**
 2. Search for **"Hauslast Prognose"**
 3. **Step 1 – Configure sensors:**
 
 | Field | Description |
 |---|---|
-| Effective battery capacity | Sensor providing usable battery capacity in kWh |
+| Effective battery capacity | Sensor providing usable battery capacity in an energy unit (e.g. Wh or kWh); converted to kWh. Without a unit, values are interpreted as kWh. |
 | Battery state of charge (SoC) | Sensor for current charge level in % |
 | Discharge cutoff / reserve | Sensor for minimum SoC in % (e.g. `10` for 10% reserve) |
 | PV forecast today | Solcast sensor with `detailedHourly` attribute for today |

@@ -5,7 +5,7 @@
         "title": "Sensoren & Einstellungen / Sensors & Settings",
         "description": "Wähle die Sensoren für Batterie, PV-Prognose und Hauslast aus.",
         "data": {
-          "bat_capacity_sensor": "Effektive Akkukapazität / Effective Battery Capacity (Sensor in kWh)",
+          "bat_capacity_sensor": "Effektive Akkukapazität / Effective Battery Capacity (Energiesensor, z. B. Wh oder kWh)",
           "bat_soc_sensor": "Akku-Ladestand / Battery State of Charge (Sensor in %)",
           "bat_cutoff_sensor": "Entladeschluss / Discharge Cutoff (Sensor in %)",
           "pv_forecast_today_sensor": "PV-Prognose Heute / PV Forecast Today (Solcast)",
@@ -17,7 +17,7 @@
           "hauslast_aktuell_sensor": "Hauslast aktuell / House Load Current (Sensor in W)"
         },
         "data_description": {
-          "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh / Total battery capacity in kWh",
+          "bat_capacity_sensor": "Gesamtkapazität; Energieeinheiten werden in kWh umgerechnet. Ohne Einheit gilt kWh. / Total battery capacity; energy units are converted to kWh. Without a unit, values are interpreted as kWh.",
           "bat_soc_sensor": "Aktueller Ladestand in Prozent / Current state of charge in percent",
           "bat_cutoff_sensor": "Mindest-Ladestand in Prozent / Minimum charge level in percent",
           "pv_forecast_today_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",
@@ -120,7 +120,7 @@
         "title": "Sensoren & Einstellungen / Sensors & Settings",
         "description": "Sensoren und Datenzeitraum anpassen.\nAdjust sensors and history period.",
         "data": {
-          "bat_capacity_sensor": "Effektive Akkukapazität / Effective Battery Capacity (Sensor in kWh)",
+          "bat_capacity_sensor": "Effektive Akkukapazität / Effective Battery Capacity (Energiesensor, z. B. Wh oder kWh)",
           "bat_soc_sensor": "Akku-Ladestand / Battery State of Charge (Sensor in %)",
           "bat_cutoff_sensor": "Entladeschluss / Discharge Cutoff (Sensor in %)",
           "pv_forecast_today_sensor": "PV-Prognose Heute / PV Forecast Today (Solcast)",
@@ -132,7 +132,7 @@
           "hauslast_aktuell_sensor": "Hauslast aktuell / House Load Current (Sensor in W)"
         },
         "data_description": {
-          "bat_capacity_sensor": "Gesamtkapazität des Akkus in kWh / Total battery capacity in kWh",
+          "bat_capacity_sensor": "Gesamtkapazität; Energieeinheiten werden in kWh umgerechnet. Ohne Einheit gilt kWh. / Total battery capacity; energy units are converted to kWh. Without a unit, values are interpreted as kWh.",
           "bat_soc_sensor": "Aktueller Ladestand in Prozent / Current state of charge in percent",
           "bat_cutoff_sensor": "Mindest-Ladestand in Prozent / Minimum charge level in percent",
           "pv_forecast_today_sensor": "Muss Attribut detailedHourly mit pv_estimate enthalten / Must contain detailedHourly attribute with pv_estimate",

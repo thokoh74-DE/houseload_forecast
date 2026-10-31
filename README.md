@@ -57,7 +57,7 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 | Anforderung | Details |
 |---|---|
 | Home Assistant | ≥ 2024.1 (empfohlen: ≥ 2026.3 für Icon-Unterstützung) |
-| Batteriespeicher-Integration | AlphaESS oder vergleichbar – muss Kapazität (kWh) und SoC (%) als Sensoren liefern |
+| Batteriespeicher-Integration | AlphaESS oder vergleichbar – muss Kapazität (Energiesensor, z. B. Wh oder kWh) und SoC (%) als Sensoren liefern |
 | PV-Prognose | [Solcast Solar Forecast](https://github.com/BJReplay/ha-solcast-solar) mit `detailedHourly`-Attribut |
 | Hauslast-Sensor | Sensor mit `state_class: total_increasing` (kWh, stündlich) oder `measurement` (W) – muss in der HA-Statistik erfasst sein |
 | SQLite-Datenbank | Standard-HA-Datenbank unter `/config/home-assistant_v2.db` |
@@ -85,13 +85,15 @@ Eine Home Assistant Custom Integration zur **stündlichen Hauslast-Prognose** un
 
 ## Einrichtung
 
+Kapazitätssensoren mit unpassenden Einheiten (z. B. W) werden mit einer Warnung übersprungen. Bis wieder gültige Batteriedaten vorliegen, kann eine vorhandene Prognose sichtbar bleiben.
+
 1. **Einstellungen → Geräte & Dienste → Integration hinzufügen**
 2. Nach **„Hauslast Prognose"** suchen
 3. **Schritt 1 – Sensoren konfigurieren:**
 
 | Feld | Beschreibung |
 |---|---|
-| Effektive Akkukapazität | Sensor, der die nutzbare Akkukapazität in kWh liefert |
+| Effektive Akkukapazität | Sensor für die nutzbare Akkukapazität mit Energieeinheit (z. B. Wh oder kWh); wird in kWh umgerechnet. Ohne Einheit gilt kWh. |
 | Akku-Ladestand (SoC) | Sensor für den aktuellen Ladezustand in % |
 | Entladeschluss / Reserve | Sensor für den minimalen SoC in % (z.B. `10` für 10 % Reserve) |
 | PV-Prognose Heute | Solcast-Sensor mit `detailedHourly`-Attribut für heute |

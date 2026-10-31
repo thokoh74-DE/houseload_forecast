@@ -6,6 +6,10 @@
 
 ## Deutsch
 
+### Unveröffentlicht
+
+- Batteriekapazität anhand der Energieeinheit des Sensors in kWh umrechnen (z. B. 11059 Wh → 11,059 kWh), damit Kapazität und Restlaufzeit korrekt berechnet werden (#6). Sensoren ohne Einheit werden weiterhin als kWh interpretiert. Unpassende Einheiten werden mit einer Warnung übersprungen; das bisherige Verhalten zur Beibehaltung vorhandener Prognosen bleibt erhalten.
+
 ### v2.1.3
 
 **🔧 Live-Lastkorrektur für die Restlaufzeit-Berechnung**
@@ -235,6 +239,10 @@ series:
 ## English
 
 🌍 [Deutsch](#deutsch) | **English**
+
+### Unreleased
+
+- Convert battery capacity from the sensor’s energy unit to kWh (e.g. 11059 Wh → 11.059 kWh), so capacity and runtime are calculated correctly (#6). Unitless sensors keep their existing kWh interpretation. Incompatible units are skipped with a warning; existing forecast-retention behavior is preserved.
 
 ### v2.1.3
 

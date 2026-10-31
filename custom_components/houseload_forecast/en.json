@@ -5,7 +5,7 @@
         "title": "Sensors & Settings",
         "description": "Select the sensors for battery, PV forecast and household load.",
         "data": {
-          "bat_capacity_sensor": "Effective Battery Capacity (sensor in kWh)",
+          "bat_capacity_sensor": "Effective Battery Capacity (energy sensor, e.g. Wh or kWh)",
           "bat_soc_sensor": "Battery State of Charge (sensor in %)",
           "bat_cutoff_sensor": "Discharge Cutoff / Reserve (sensor in %)",
           "pv_forecast_today_sensor": "PV Forecast Today (Solcast)",
@@ -17,7 +17,7 @@
           "hauslast_aktuell_sensor": "House Load Current (Sensor in W)"
         },
         "data_description": {
-          "bat_capacity_sensor": "Total battery capacity in kWh",
+          "bat_capacity_sensor": "Total battery capacity; energy units are converted to kWh. Without a unit, values are interpreted as kWh.",
           "bat_soc_sensor": "Current state of charge in percent",
           "bat_cutoff_sensor": "Minimum charge level in percent (reserve)",
           "pv_forecast_today_sensor": "Must contain attribute detailedHourly with pv_estimate per hour",
@@ -120,7 +120,7 @@
         "title": "Sensors & Settings",
         "description": "Adjust sensors and history period.",
         "data": {
-          "bat_capacity_sensor": "Effective Battery Capacity (sensor in kWh)",
+          "bat_capacity_sensor": "Effective Battery Capacity (energy sensor, e.g. Wh or kWh)",
           "bat_soc_sensor": "Battery State of Charge (sensor in %)",
           "bat_cutoff_sensor": "Discharge Cutoff / Reserve (sensor in %)",
           "pv_forecast_today_sensor": "PV Forecast Today (Solcast)",
@@ -132,7 +132,7 @@
           "hauslast_aktuell_sensor": "House Load Current (Sensor in W)"
         },
         "data_description": {
-          "bat_capacity_sensor": "Total battery capacity in kWh",
+          "bat_capacity_sensor": "Total battery capacity; energy units are converted to kWh. Without a unit, values are interpreted as kWh.",
           "bat_soc_sensor": "Current state of charge in percent",
           "bat_cutoff_sensor": "Minimum charge level in percent (reserve)",
           "pv_forecast_today_sensor": "Must contain attribute detailedHourly with pv_estimate per hour",

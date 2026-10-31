@@ -5,6 +5,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
+from math import isfinite
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -12,12 +13,14 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, EntityCategory, UnitOfEnergy
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import EnergyConverter
 
 from .const import (
     CONF_BAT_CAPACITY_SENSOR,
@@ -361,6 +364,36 @@ class HauslastCoordinator:
         except (ValueError, TypeError):
             return default
 
+    def _get_capacity_kwh(self, entity_id: str | None) -> float:
+        """Read battery capacity in kWh, preserving legacy unitless sensors."""
+        if not entity_id:
+            return 0.0
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in ("unknown", "unavailable", ""):
+            return 0.0
+        try:
+            capacity = float(state.state)
+        except (ValueError, TypeError):
+            return 0.0
+        if not isfinite(capacity):
+            return 0.0
+
+        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+        if unit is None or unit == "":
+            return capacity
+        if isinstance(unit, str):
+            try:
+                capacity = EnergyConverter.convert(capacity, unit, UnitOfEnergy.KILO_WATT_HOUR)
+            except HomeAssistantError:
+                pass
+            else:
+                return capacity if isfinite(capacity) else 0.0
+        _LOGGER.warning(
+            "Batteriekapazitätssensor %s hat eine ungültige Energieeinheit %r – überspringe Berechnung",
+            entity_id, unit,
+        )
+        return 0.0
+
     def _compute(self):
         import sqlite3
 
@@ -550,7 +583,7 @@ class HauslastCoordinator:
             self.profile_source_we = f"Fallback (DB-Fehler: {exc})"
 
         # ── Batterie-Werte ─────────────────────────────────────────────
-        self.bat_capacity_raw = self._get_float(self.cfg.get(CONF_BAT_CAPACITY_SENSOR))
+        self.bat_capacity_raw = self._get_capacity_kwh(self.cfg.get(CONF_BAT_CAPACITY_SENSOR))
         self.soc_pct_raw      = self._get_float(self.cfg.get(CONF_BAT_SOC_SENSOR))
         self.cutoff_pct_raw   = self._get_float(self.cfg.get(CONF_BAT_CUTOFF_SENSOR))
 
@@ -863,7 +896,7 @@ class HauslastCoordinator:
 
         if hauslast_current_kw > 0.001 and self.bat_rest_kwh > 0.001:
             bat_only_h = self.bat_rest_kwh / hauslast_current_kw
-            self.bat_only_runtime_min = min(int(bat_only_h * 60), MAX_RUNTIME_MIN)
+            self.bat_only_runtime_min = int(min(bat_only_h * 60, MAX_RUNTIME_MIN))
         else:
             self.bat_only_runtime_min = 0
 
